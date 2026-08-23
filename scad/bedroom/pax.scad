@@ -1,9 +1,9 @@
-// bedroom / wardrobe — a wardrobe-frame token with the size engraved on top and
-// a groove marking the door front.
+// bedroom / pax — an IKEA PAX wardrobe frame token, with the size engraved on
+// top and a groove marking the door front.
 //
-// Width/Depth are the real-world frame size in cm (IKEA PAX naming: 50, 75 or
-// 100 wide, 58 or 35 deep). Height is the PRINTED height in mm: kept the same as
-// the beds (6 mm) so every piece of the set stacks and slides on the plan.
+// Width/Depth are the real-world frame size in cm (PAX comes 50, 75 or 100 wide,
+// 58 or 35 deep). Height is the PRINTED height in mm: kept the same as the beds
+// (6 mm) so every piece of the set stacks and slides on the plan.
 //
 // The back sits against the wall at +Y — same orientation as a bed's head end —
 // so the doors are marked at the -Y edge.
@@ -22,9 +22,9 @@ Front_depth = 6;
 // build with smaller hardware (MAGNET_D=3 MAGNET_H=2).
 Magnets = 1;
 
-wardrobe();
+pax();
 
-module wardrobe() {
+module pax() {
     txt = str(Width, "x", Depth);
     difference() {
         footprint(Width, Depth, Height);

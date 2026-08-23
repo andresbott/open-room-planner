@@ -78,15 +78,15 @@ BED_MAGNETS ?= 2
 # expand <width>x<length> -> Width/Length params
 $(foreach s,$(BED_SIZES),$(eval $(call part,bedroom,bed,Width=$(word 1,$(subst x, ,$(s)));Length=$(word 2,$(subst x, ,$(s)));Height=$(BED_H);Magnets=$(BED_MAGNETS),bed_$(s))))
 
-# -- Wardrobes: IKEA PAX frames, in cm — every width x every depth.
-WARDROBE_WIDTHS := 50 75 100
-WARDROBE_DEPTHS := 35 58
-WARDROBE_H      ?= 6
-# magnet pockets per wardrobe (0 = none). The 35 cm-deep frames are only 7 mm
-# across at 1:50, too narrow for a 5 mm disc: they render solid with a warning
-# unless you build them with smaller hardware (MAGNET_D=3 MAGNET_H=2).
-WARDROBE_MAGNETS ?= 1
-$(foreach w,$(WARDROBE_WIDTHS),$(foreach d,$(WARDROBE_DEPTHS),$(eval $(call part,bedroom,wardrobe,Width=$(w);Depth=$(d);Height=$(WARDROBE_H);Magnets=$(WARDROBE_MAGNETS),wardrobe_$(w)x$(d)))))
+# -- IKEA PAX wardrobe frames, in cm — every width x every depth.
+PAX_WIDTHS := 50 75 100
+PAX_DEPTHS := 35 58
+PAX_H      ?= 6
+# magnet pockets per frame (0 = none). The 35 cm-deep frames are only 7 mm across
+# at 1:50, too narrow for a 5 mm disc: they render solid with a warning unless you
+# build them with smaller hardware (MAGNET_D=3 MAGNET_H=2).
+PAX_MAGNETS ?= 1
+$(foreach w,$(PAX_WIDTHS),$(foreach d,$(PAX_DEPTHS),$(eval $(call part,bedroom,pax,Width=$(w);Depth=$(d);Height=$(PAX_H);Magnets=$(PAX_MAGNETS),pax_$(w)x$(d)))))
 
 BEDROOM_STLS := $(STLS_bedroom)
 BEDROOM_PNGS := $(BEDROOM_STLS:.stl=.png)

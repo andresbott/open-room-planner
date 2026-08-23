@@ -71,12 +71,12 @@ Defaults live in `scad/lib/common.scad` and are overridable per build:
 ```sh
 make bedroom MAGNET_D=3 MAGNET_H=2   # 3x2 discs
 make bedroom BED_MAGNETS=0           # no pockets
-make bedroom WARDROBE_MAGNETS=0      # ditto, wardrobes
+make bedroom PAX_MAGNETS=0           # ditto, PAX wardrobes
 ```
 
 A pocket needs the piece to be about 7.6 mm across for a 5 mm disc, so at 1:50
-the 35 cm-deep wardrobe frames (7 mm) render solid with a warning — build those
-with `MAGNET_D=3 MAGNET_H=2`.
+the 35 cm-deep IKEA PAX wardrobe frames (7 mm) render solid with a warning —
+build those with `MAGNET_D=3 MAGNET_H=2`.
 
 Printing and assembly:
 
