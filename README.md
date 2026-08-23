@@ -28,27 +28,6 @@ down to every part:
 make bedroom SCALE=25     # or: openscad -D Scale=25 ...
 ```
 
-### What is *not* scaled
-
-A few values are printed millimetres on purpose — they are print/handling
-details rather than real-world dimensions, so they stay the same at any scale:
-
-- **piece height** (`Height` per part, `BED_H ?= 6` in the Makefile) — kept low
-  so the tokens stack and slide around on the plan
-- **corner rounding** (`Corner_radius = 0.6`)
-- **engraved labels, symbols and grooves** (`Label_size = 3`, `Label_depth = 0.4`,
-  `Symbol_size = 5`, `Symbol_stroke = 0.4`) — a piece too narrow for a readable
-  size gets a pictogram instead and nothing else, its size staying in the file
-  name: a clothes hanger on the IKEA PAX frames, drawer fronts on the IKEA HEMNES
-  chest
-- **raised pads** (`Cushion_h = 1`) — the pillows at the head end of a bed stand
-  1 mm above the mattress, whatever the scale
-- **magnet pockets** (`Magnet_d`, `Magnet_h`, …) — hardware, see below
-
-So changing `SCALE` resizes footprints but leaves thickness untouched: at
-`SCALE=25` the 160x200 bed is 64 x 80 x 6 mm, at `SCALE=100` it is 16 x 20 x 6 mm
-(7 mm over the pillows either way).
-
 ## Magnets
 
 Parts can hold onto a steel plan surface with neodymium discs dropped into
