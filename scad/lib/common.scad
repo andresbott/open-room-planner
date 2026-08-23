@@ -23,6 +23,11 @@ Symbol_stroke = 0.4;  // line width of a symbol — keep it >= one nozzle
 Symbol_margin = 0.8;  // min wall between a symbol and the edge of a piece
 Hanger_ratio  = 2.2;  // width : height of the hanger symbol
 
+// Raised soft pads — pillows, seat cushions (see cushion()). Printed mm.
+Cushion_h      = 1;    // how far a pad stands above the face it sits on
+Cushion_taper  = 0.5;  // how much the top is pulled in, so the sides slope
+Cushion_radius = 1.2;  // corner rounding of a pad — softer than a carcass
+
 // Corner rounding of a footprint, in printed mm (not scaled — it is a print
 // detail, not a real-world dimension).
 Corner_radius = 0.6;
@@ -66,6 +71,22 @@ module footprint_2d(w_cm, d_cm, r = Corner_radius) {
         square([cm(w_cm), cm(d_cm)], center = true);
 }
 
+// A soft raised pad on top of a piece — a pillow, a seat cushion: <w_cm> x <d_cm>
+// centred on the origin, standing <h> printed mm on a face at <base_z>. The top
+// is pulled in by <taper> so the sides slope instead of stepping: nothing to
+// overhang on the printer, and it reads as soft from above. Add it to the solid:
+//   union() { footprint(160, 200, 6); translate([0, cm(70), 0]) cushion(74, 50, 6); }
+module cushion(w_cm, d_cm, base_z, h = Cushion_h, taper = Cushion_taper,
+               r = Cushion_radius) {
+    hull() {
+        translate([0, 0, base_z - 0.01])
+            linear_extrude(height = 0.01) footprint_2d(w_cm, d_cm, r);
+        translate([0, 0, base_z + h])
+            linear_extrude(height = 0.01)
+                offset(delta = -taper) footprint_2d(w_cm, d_cm, r);
+    }
+}
+
 // Text cut into the top face of a piece. Subtract it from the solid:
 //   difference() { footprint(160, 200, 6); label("160x200", 6); }
 module label(txt, top_z, size = Label_size, depth = Label_depth) {
@@ -81,34 +102,48 @@ module label(txt, top_z, size = Label_size, depth = Label_depth) {
 function hanger_size(w, h, size = Symbol_size, ratio = Hanger_ratio) =
     min(size, h, w / ratio);
 
-// A clothes hanger cut into the top face of a piece — a triangular body under a
-// hooked loop, drawn in <stroke>-wide lines, <size> mm tall and <ratio> x that
-// wide, centred on the origin. Subtract it from the solid like label():
+// A <w>-wide 2D stroke from <p1> to <p2>, with round ends — the pen symbols are
+// drawn with. Round ends also round every join, so no corner comes out sharp.
+module stroke_line(p1, p2, w) {
+    hull() { translate(p1) circle(d = w); translate(p2) circle(d = w); }
+}
+
+// The same pen swept along an arc of radius <r>, from <a1> to <a2> degrees around
+// the origin. Chained hulls, so the outer edge stays smooth.
+module stroke_arc(r, a1, a2, w, step = 6) {
+    n = max(1, ceil(abs(a2 - a1) / step));
+    for (i = [0 : n - 1])
+        hull() {
+            translate(r * [cos(a1 + (a2 - a1) * i / n),
+                           sin(a1 + (a2 - a1) * i / n)]) circle(d = w);
+            translate(r * [cos(a1 + (a2 - a1) * (i + 1) / n),
+                           sin(a1 + (a2 - a1) * (i + 1) / n)]) circle(d = w);
+        }
+}
+
+// A clothes hanger cut into the top face of a piece — shoulders and a bottom bar
+// under a hooked loop, drawn in <stroke>-wide round-ended lines, <size> mm tall
+// and <ratio> x that wide, centred on the origin. Subtract it like label():
 //   difference() { footprint(100, 58, 6); hanger(4, 6); }
 module hanger(size, top_z, stroke = Symbol_stroke, depth = Label_depth,
               ratio = Hanger_ratio) {
-    w      = size * ratio;
-    hook_d = size * 0.45;      // the loop takes the top of the symbol
-    hook_r = hook_d / 2;
-    body_h = size - hook_d;    // ... the shoulders the rest
-    body   = [[-w / 2, 0], [w / 2, 0], [0, body_h]];
-    // the loop sits <stroke> into the apex so body and hook come out as one cut
-    cy     = body_h + hook_r - stroke;
+    // the pen is centred on the path, so the paths span one stroke less than the
+    // symbol they have to fit in
+    pw     = size * ratio - stroke;
+    ph     = size - stroke;
+    hook_d = ph * 0.45;        // the loop takes the top of the symbol
+    body_h = ph - hook_d;      // ... the shoulders and the bar the rest
     translate([0, 0, top_z - depth])
         linear_extrude(height = depth + 0.01)
-            translate([0, -size / 2])
+            translate([0, -ph / 2])
                 union() {
-                    difference() {          // shoulders + bottom bar
-                        polygon(body);
-                        offset(delta = -stroke) polygon(body);
-                    }
-                    difference() {          // hook, open at the lower right
-                        translate([0, cy]) difference() {
-                            circle(d = hook_d);
-                            circle(d = hook_d - 2 * stroke);
-                        }
-                        translate([0, cy - hook_r]) square([hook_r, hook_r]);
-                    }
+                    stroke_line([-pw / 2, 0], [pw / 2, 0], stroke);  // bottom bar
+                    stroke_line([-pw / 2, 0], [0, body_h], stroke);  // shoulders
+                    stroke_line([ pw / 2, 0], [0, body_h], stroke);
+                    // hook: starts at the shoulder apex, loops round and comes
+                    // back down on the right, open at the lower right
+                    translate([0, body_h + hook_d / 2])
+                        stroke_arc(hook_d / 2, -90, -360, stroke);
                 }
 }
 

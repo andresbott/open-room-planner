@@ -86,7 +86,7 @@ PAX_H      ?= 6
 # at 1:50, too narrow for a 5 mm disc: they render solid with a warning unless you
 # build them with smaller hardware (MAGNET_D=3 MAGNET_H=2).
 PAX_MAGNETS ?= 1
-$(foreach w,$(PAX_WIDTHS),$(foreach d,$(PAX_DEPTHS),$(eval $(call part,bedroom,pax,Width=$(w);Depth=$(d);Height=$(PAX_H);Magnets=$(PAX_MAGNETS),pax_$(w)x$(d)))))
+$(foreach w,$(PAX_WIDTHS),$(foreach d,$(PAX_DEPTHS),$(eval $(call part,bedroom,ikea_pax,Width=$(w);Depth=$(d);Height=$(PAX_H);Magnets=$(PAX_MAGNETS),ikea_pax_$(w)x$(d)))))
 
 BEDROOM_STLS := $(STLS_bedroom)
 BEDROOM_PNGS := $(BEDROOM_STLS:.stl=.png)

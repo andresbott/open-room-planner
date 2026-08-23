@@ -38,11 +38,15 @@ details rather than real-world dimensions, so they stay the same at any scale:
 - **corner rounding** (`Corner_radius = 0.6`)
 - **engraved labels, symbols and grooves** (`Label_size = 3`, `Label_depth = 0.4`,
   `Symbol_size = 4`, `Symbol_stroke = 0.4`) — a piece too narrow for a readable
-  size gets a pictogram instead: the PAX frames carry a clothes hanger
+  size gets a pictogram instead: the IKEA PAX frames carry a clothes hanger and
+  nothing else, their size is in the file name
+- **raised pads** (`Cushion_h = 1`) — the pillows at the head end of a bed stand
+  1 mm above the mattress, whatever the scale
 - **magnet pockets** (`Magnet_d`, `Magnet_h`, …) — hardware, see below
 
 So changing `SCALE` resizes footprints but leaves thickness untouched: at
-`SCALE=25` the 160x200 bed is 64 x 80 x 6 mm, at `SCALE=100` it is 16 x 20 x 6 mm.
+`SCALE=25` the 160x200 bed is 64 x 80 x 6 mm, at `SCALE=100` it is 16 x 20 x 6 mm
+(7 mm over the pillows either way).
 
 ## Magnets
 
