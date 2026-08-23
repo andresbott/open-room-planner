@@ -36,7 +36,9 @@ details rather than real-world dimensions, so they stay the same at any scale:
 - **piece height** (`Height` per part, `BED_H ?= 6` in the Makefile) — kept low
   so the tokens stack and slide around on the plan
 - **corner rounding** (`Corner_radius = 0.6`)
-- **engraved labels and grooves** (`Label_size = 3`, `Label_depth = 0.4`)
+- **engraved labels, symbols and grooves** (`Label_size = 3`, `Label_depth = 0.4`,
+  `Symbol_size = 4`, `Symbol_stroke = 0.4`) — a piece too narrow for a readable
+  size gets a pictogram instead: the PAX frames carry a clothes hanger
 - **magnet pockets** (`Magnet_d`, `Magnet_h`, …) — hardware, see below
 
 So changing `SCALE` resizes footprints but leaves thickness untouched: at

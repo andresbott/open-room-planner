@@ -13,9 +13,15 @@ Scale = 50;
 Resolution = 64;
 
 // Engraved-label defaults (see label()).
-Label_size   = 3;    // printed cap height, mm
-Label_depth  = 0.4;  // how deep the text is cut into the top face, mm
-Label_margin = 0.8;  // min wall between a label and the edge of a piece, mm
+Label_size  = 3;    // printed cap height, mm
+Label_depth = 0.4;  // how deep the text is cut into the top face, mm
+
+// Engraved-symbol defaults, for pieces that carry a pictogram instead of text
+// (see hanger()). Printed mm — drawing detail, so they do not scale.
+Symbol_size   = 4;    // nominal symbol height, shrunk to what the piece allows
+Symbol_stroke = 0.4;  // line width of a symbol — keep it >= one nozzle
+Symbol_margin = 0.8;  // min wall between a symbol and the edge of a piece
+Hanger_ratio  = 2.2;  // width : height of the hanger symbol
 
 // Corner rounding of a footprint, in printed mm (not scaled — it is a print
 // detail, not a real-world dimension).
@@ -69,13 +75,42 @@ module label(txt, top_z, size = Label_size, depth = Label_depth) {
                  font = "DejaVu Sans");
 }
 
-// The largest label size that keeps <txt> inside <w> printed mm of width. A
-// DejaVu Sans digit is ~0.84 x the size OpenSCAD is given wide, so a 5-character
-// label needs ~4.2 x its size. Lets a narrow token carry the same label as a
-// wide one, just smaller:
-//   label(txt, h, size = label_size_for(txt, cm(Width) - 2 * Label_margin));
-function label_size_for(txt, w, size = Label_size, aspect = 0.84) =
-    min(size, w / (len(txt) * aspect));
+// ---- symbols ----------------------------------------------------------------
+// The tallest hanger that fits a <w> x <h> printed-mm patch of top face, so a
+// small piece gets the same symbol as a big one, just smaller.
+function hanger_size(w, h, size = Symbol_size, ratio = Hanger_ratio) =
+    min(size, h, w / ratio);
+
+// A clothes hanger cut into the top face of a piece — a triangular body under a
+// hooked loop, drawn in <stroke>-wide lines, <size> mm tall and <ratio> x that
+// wide, centred on the origin. Subtract it from the solid like label():
+//   difference() { footprint(100, 58, 6); hanger(4, 6); }
+module hanger(size, top_z, stroke = Symbol_stroke, depth = Label_depth,
+              ratio = Hanger_ratio) {
+    w      = size * ratio;
+    hook_d = size * 0.45;      // the loop takes the top of the symbol
+    hook_r = hook_d / 2;
+    body_h = size - hook_d;    // ... the shoulders the rest
+    body   = [[-w / 2, 0], [w / 2, 0], [0, body_h]];
+    // the loop sits <stroke> into the apex so body and hook come out as one cut
+    cy     = body_h + hook_r - stroke;
+    translate([0, 0, top_z - depth])
+        linear_extrude(height = depth + 0.01)
+            translate([0, -size / 2])
+                union() {
+                    difference() {          // shoulders + bottom bar
+                        polygon(body);
+                        offset(delta = -stroke) polygon(body);
+                    }
+                    difference() {          // hook, open at the lower right
+                        translate([0, cy]) difference() {
+                            circle(d = hook_d);
+                            circle(d = hook_d - 2 * stroke);
+                        }
+                        translate([0, cy - hook_r]) square([hook_r, hook_r]);
+                    }
+                }
+}
 
 // ---- magnets ----------------------------------------------------------------
 // How many magnet pockets of <n> requested actually fit in a <w_cm> x <d_cm>
