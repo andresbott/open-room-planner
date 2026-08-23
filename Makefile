@@ -88,6 +88,13 @@ PAX_H      ?= 6
 PAX_MAGNETS ?= 1
 $(foreach w,$(PAX_WIDTHS),$(foreach d,$(PAX_DEPTHS),$(eval $(call part,bedroom,ikea_pax,Width=$(w);Depth=$(d);Height=$(PAX_H);Magnets=$(PAX_MAGNETS),ikea_pax_$(w)x$(d)))))
 
+# -- IKEA HEMNES chests of drawers: <width>x<depth> footprints, in cm.
+HEMNES_SIZES := 108x50
+HEMNES_H     ?= 6
+# magnet pockets per chest, in a row along the width (0 = none)
+HEMNES_MAGNETS ?= 2
+$(foreach s,$(HEMNES_SIZES),$(eval $(call part,bedroom,ikea_hemnes,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(HEMNES_H);Magnets=$(HEMNES_MAGNETS),ikea_hemnes_$(s))))
+
 BEDROOM_STLS := $(STLS_bedroom)
 BEDROOM_PNGS := $(BEDROOM_STLS:.stl=.png)
 

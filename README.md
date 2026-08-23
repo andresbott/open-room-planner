@@ -37,9 +37,10 @@ details rather than real-world dimensions, so they stay the same at any scale:
   so the tokens stack and slide around on the plan
 - **corner rounding** (`Corner_radius = 0.6`)
 - **engraved labels, symbols and grooves** (`Label_size = 3`, `Label_depth = 0.4`,
-  `Symbol_size = 4`, `Symbol_stroke = 0.4`) — a piece too narrow for a readable
-  size gets a pictogram instead: the IKEA PAX frames carry a clothes hanger and
-  nothing else, their size is in the file name
+  `Symbol_size = 5`, `Symbol_stroke = 0.4`) — a piece too narrow for a readable
+  size gets a pictogram instead and nothing else, its size staying in the file
+  name: a clothes hanger on the IKEA PAX frames, drawer fronts on the IKEA HEMNES
+  chest
 - **raised pads** (`Cushion_h = 1`) — the pillows at the head end of a bed stand
   1 mm above the mattress, whatever the scale
 - **magnet pockets** (`Magnet_d`, `Magnet_h`, …) — hardware, see below
@@ -78,6 +79,7 @@ Defaults live in `scad/lib/common.scad` and are overridable per build:
 make bedroom MAGNET_D=3 MAGNET_H=2   # 3x2 discs
 make bedroom BED_MAGNETS=0           # no pockets
 make bedroom PAX_MAGNETS=0           # ditto, PAX wardrobes
+make bedroom HEMNES_MAGNETS=1        # one pocket per HEMNES chest instead of two
 ```
 
 A pocket needs the piece to be about 7.6 mm across for a 5 mm disc, so at 1:50
