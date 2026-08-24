@@ -1,0 +1,637 @@
+# Makefile — render open-room-planner parts (STLs + preview PNGs) from the
+# per-part .scad files under scad/, grouped by room. Each room -> files/<room>/.
+#
+# Parts are written in real-world centimetres and shrunk to the plan scale by
+# scad/lib/common.scad (1:40 — 2.5 cm = 1 m).
+#
+# Add a part: drop scad/<room>/<part>.scad next to its siblings, then declare one
+#   $(call part,<room>,<part>,<PARAMS>,<out-name>)
+# per variant in that room's block (explicitly, or via a foreach/eval matrix like
+# the bed sizes). The generic %.stl / %.png rules do the actual rendering.
+#
+# Add a room: give it a <ROOM>_DIR, declare its parts, add a phony aggregator and
+# a clean-<room> target, and list it under `all` / `clean`.
+
+OPENSCAD   ?= openscad
+CONVERT    ?= convert
+SCAD_DIR   := scad
+LIB_DIR    := $(SCAD_DIR)/lib
+FILES_DIR  := files
+# every part depends on the shared lib
+LIB_SCADS  := $(wildcard $(LIB_DIR)/*.scad)
+
+# Plan scale: 1:SCALE. 40 -> 2.5 cm on the plan = 1 m (an A5 sheet ~ a 50 m2 room).
+SCALE      ?= 40
+# OpenSCAD $fn for the final render (the CLI is never $preview, so this is the real one)
+RESOLUTION ?= 64
+
+# Heights are real-world centimetres, like every footprint, and are shrunk by the
+# same SCALE (see the heights section in scad/lib/common.scad). Each part below
+# declares the real height of the furniture it stands for — <ROOM>_<PART>_H, in cm.
+# These two knobs act on all of them at once:
+#   HEIGHT_SCALE  squash every piece (0.75 = three quarters as tall) while keeping
+#                 them in the right order — a shorter, cheaper set to print
+#   HEIGHT_MIN    the least a piece may print, whatever its real height: a magnet
+#                 pocket plus material over it. Only a shower tray reaches it.
+HEIGHT_SCALE ?= 1
+HEIGHT_MIN   ?= 2.4
+
+# Magnet pockets in the bottom face, in printed mm — hardware, so they are not
+# scaled. Two discs cover the catalogue, both 1 mm high: the standard 4x1, and a
+# 2x1 for pieces too narrow for it (a chair leg, a partition wall) — each part
+# gets the bigger one that fits, and says so when it drops to the small one. How
+# many go in a part is a per-part parameter.
+MAGNET_D       ?= 4
+MAGNET_D_SMALL ?= 2
+MAGNET_H       ?= 1
+# Printer allowance on a pocket: an FDM hole prints undersize, so it is cut this
+# much wider and deeper than the disc. Raise it if the magnets will not drop in,
+# lower it if they fall out.
+MAGNET_FIT     ?= 0.3
+MAGNET_FIT_H   ?= 0.2
+
+# Shared by every part; each part adds its own dimensions on top.
+COMMON = Scale=$(SCALE);Resolution=$(RESOLUTION);Height_scale=$(HEIGHT_SCALE);Height_min=$(HEIGHT_MIN);Magnet_d=$(MAGNET_D);Magnet_d_small=$(MAGNET_D_SMALL);Magnet_h=$(MAGNET_H);Magnet_fit=$(MAGNET_FIT);Magnet_fit_h=$(MAGNET_FIT_H)
+
+# Preview-image settings (%.png rule: OpenSCAD render -> ImageMagick trim + margin).
+IMG_SIZE   ?= 1600,1600
+IMG_COLOR  ?= Cornfield
+IMG_BG     ?= rgb(255,255,229)
+IMG_MARGIN ?= 7%
+IMG_OPTS   ?= --imgsize=$(IMG_SIZE) --colorscheme=$(IMG_COLOR) --viewall --autocenter --render
+
+# Renders are skipped when the outputs are newer than the .scad sources and this
+# Makefile. Set REBUILD=1 to force everything to re-render.
+REBUILD    ?=
+ifdef REBUILD
+FORCE_DEP  := FORCE
+endif
+
+default: help
+
+# part,<room>,<part-scad>,<PARAMS>,<out-name> -> declares files/<room>/<room>_<out-name>.{stl,png}
+# and the sources + parameters they share.
+define part
+STLS_$(1) += $(FILES_DIR)/$(1)/$(1)_$(4).stl
+SRCOF_$(FILES_DIR)/$(1)/$(1)_$(4).stl := $(SCAD_DIR)/$(1)/$(2).scad
+$(FILES_DIR)/$(1)/$(1)_$(4).stl $(FILES_DIR)/$(1)/$(1)_$(4).png: $(SCAD_DIR)/$(1)/$(2).scad $(LIB_SCADS) Makefile $(FORCE_DEP)
+$(FILES_DIR)/$(1)/$(1)_$(4).stl $(FILES_DIR)/$(1)/$(1)_$(4).png: SRC = $(SCAD_DIR)/$(1)/$(2).scad
+$(FILES_DIR)/$(1)/$(1)_$(4).stl $(FILES_DIR)/$(1)/$(1)_$(4).png: PARAMS = $(3);$(COMMON)
+endef
+
+#==========================================================================================
+##@ Rendering
+#==========================================================================================
+.PHONY: all
+all: bedroom livingroom kitchen diningroom bathroom office hallway kidsroom laundry outdoor walls ## render every room + walls (STLs + previews)
+
+# ---- Bedroom -----------------------------------------------------------------
+BEDROOM_DIR  := $(FILES_DIR)/bedroom
+
+# -- Beds: one piece per mattress size, in cm (IKEA naming). Height is the top of
+#    the mattress — one of the lowest pieces of the set.
+BED_SIZES := 80x200 90x200 140x200 160x200
+BED_H     ?= 50
+# magnet pockets per bed, in a row along the length (0 = none)
+BED_MAGNETS ?= 2
+# expand <width>x<length> -> Width/Length params
+$(foreach s,$(BED_SIZES),$(eval $(call part,bedroom,bed,Width=$(word 1,$(subst x, ,$(s)));Length=$(word 2,$(subst x, ,$(s)));Height=$(BED_H);Magnets=$(BED_MAGNETS),bed_$(s))))
+
+# -- IKEA PAX wardrobe frames, in cm — every width x every depth, at the tall
+#    236 cm frame height (PAX_H=201 renders the short frame instead).
+PAX_WIDTHS := 50 75 100
+PAX_DEPTHS := 35 58
+PAX_H      ?= 236
+# magnet pockets per frame (0 = none). At 1:40 the 35 cm-deep frames are 8.75 mm
+# across — still wide enough for a 4 mm disc, so every frame depth takes one. The
+# widths in PAX_WIDE_WIDTHS get a row of PAX_WIDE_MAGNETS instead: a 100 cm frame is
+# 25 mm long and one pocket in the middle lets it pivot on the plan.
+PAX_MAGNETS      ?= 1
+PAX_WIDE_WIDTHS  := 100
+# ... and PAX_MAGNETS=0 still means no pockets on any frame, wide ones included.
+PAX_WIDE_MAGNETS ?= $(if $(filter 0,$(PAX_MAGNETS)),0,2)
+$(foreach w,$(PAX_WIDTHS),$(foreach d,$(PAX_DEPTHS),$(eval $(call part,bedroom,ikea_pax,Width=$(w);Depth=$(d);Height=$(PAX_H);Magnets=$(if $(filter $(w),$(PAX_WIDE_WIDTHS)),$(PAX_WIDE_MAGNETS),$(PAX_MAGNETS)),ikea_pax_$(w)x$(d)))))
+
+# -- IKEA HEMNES chests of drawers: <width>x<depth> footprints, in cm, at the
+#    96 cm carcass height of the 3- and 8-drawer chests (the 6-drawer one is 131).
+HEMNES_SIZES := 108x50
+HEMNES_H     ?= 96
+# magnet pockets per chest, in a row along the width (0 = none)
+HEMNES_MAGNETS ?= 2
+$(foreach s,$(HEMNES_SIZES),$(eval $(call part,bedroom,ikea_hemnes,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(HEMNES_H);Magnets=$(HEMNES_MAGNETS),ikea_hemnes_$(s))))
+
+# -- Bed-end benches: one piece per common width, in cm — 100/120 for a single or
+#    small double, 140/160 to span a queen/king footboard. Depth stays 40 (a
+#    bench's seat depth). Height is seat height, cushion included.
+BENCH_WIDTHS := 100 120 140 160
+BENCH_DEPTH  ?= 40
+BENCH_H      ?= 45
+# magnet pockets per bench, in a row along the width (0 = none)
+BENCH_MAGNETS ?= 2
+$(foreach w,$(BENCH_WIDTHS),$(eval $(call part,bedroom,bench,Width=$(w);Depth=$(BENCH_DEPTH);Height=$(BENCH_H);Magnets=$(BENCH_MAGNETS),bench_$(w)x$(BENCH_DEPTH))))
+# The branded IKEA EKENÄSET bench: the same bench part at its real 112 x 48 cm
+# footprint, at the same seat height and magnet count as the plain widths.
+$(eval $(call part,bedroom,bench,Width=112;Depth=48;Height=$(BENCH_H);Magnets=$(BENCH_MAGNETS),ikea_ekenaset_112x48))
+
+# -- Nightstands / bedside tables: one piece per common width, in cm; depth stays
+#    40 (a bedside table's usual depth). Height is the top, about level with the
+#    mattress next to it. Near-square — at 1:40 a 40 cm side is 10 mm, comfortably
+#    wide enough for the single 4 mm magnet.
+NIGHTSTAND_WIDTHS  := 40 45 50 60
+NIGHTSTAND_DEPTH   ?= 40
+NIGHTSTAND_H       ?= 55
+NIGHTSTAND_MAGNETS ?= 1
+$(foreach w,$(NIGHTSTAND_WIDTHS),$(eval $(call part,bedroom,nightstand,Width=$(w);Depth=$(NIGHTSTAND_DEPTH);Height=$(NIGHTSTAND_H);Magnets=$(NIGHTSTAND_MAGNETS),nightstand_$(w)x$(NIGHTSTAND_DEPTH))))
+
+# -- Dressing tables: one piece per common vanity width, in cm — 80/100/120. A
+#    standing mirror on the back of a flat top: a vanity's drawers are on its front,
+#    which a token seen from above cannot show, and the mirror is enough to tell the
+#    piece apart (see the .scad). Depth stays 40 (a slim vanity). Height is the top
+#    at desk height; the mirror stands its own 65 cm above that.
+DRESSING_TABLE_WIDTHS  := 80 100 120
+DRESSING_TABLE_DEPTH   ?= 40
+DRESSING_TABLE_H       ?= 75
+# magnet pockets per table, in a row along the width (0 = none)
+DRESSING_TABLE_MAGNETS ?= 2
+$(foreach w,$(DRESSING_TABLE_WIDTHS),$(eval $(call part,bedroom,dressing_table,Width=$(w);Depth=$(DRESSING_TABLE_DEPTH);Height=$(DRESSING_TABLE_H);Magnets=$(DRESSING_TABLE_MAGNETS),dressing_table_$(w)x$(DRESSING_TABLE_DEPTH))))
+
+# -- Extra bedroom pieces, one default variant each (sizes live in the .scad). A
+#    standalone/sliding wardrobe is full height, like a tall PAX frame.
+WARDROBE_H ?= 236
+$(eval $(call part,bedroom,wardrobe,Height=$(WARDROBE_H);Magnets=2,wardrobe))
+
+BEDROOM_STLS := $(STLS_bedroom)
+BEDROOM_PNGS := $(BEDROOM_STLS:.stl=.png)
+
+.PHONY: bedroom
+bedroom: $(BEDROOM_STLS) $(BEDROOM_PNGS) ## render bedroom parts + previews -> files/bedroom/
+
+# ---- Living room -------------------------------------------------------------
+LIVINGROOM_DIR := $(FILES_DIR)/livingroom
+
+# -- Standing lamp: one piece — the classic floor lamp, a 45 cm drum (empire) shade
+#    on a pole. Height is the real height of a floor lamp — the tallest thing in the
+#    room after the wardrobes. The shade is the widest part of a lamp — the space it
+#    actually takes — so that is the size in the file name. lamp.scad still carries
+#    the cone, globe and tripod shapes at any shade/foot size; they are just not
+#    built (override Type/Shade to render one).
+LAMP_H       ?= 160
+# magnet pockets per lamp (0 = none). At 1:40 a 30 cm lamp foot is 7.5 mm across —
+# comfortably wide enough for a 4 mm disc, so the lamp takes one pocket.
+LAMP_MAGNETS ?= 1
+# the drum shade diameter and the foot it stands on, in cm
+LAMP_SHADE   ?= 45
+LAMP_BASE    ?= 30
+# The least the pole may print, in mm — a real 5 cm pole is only 1.25 mm at 1:40, so
+# this is what actually gets printed. Six perimeters at a 0.4 nozzle: a pole this
+# thick prints upright without wobbling and survives handling. Raise it for a
+# sturdier pole, lower it for a finer one.
+LAMP_STEM_MIN ?= 2.4
+$(eval $(call part,livingroom,lamp,Type="drum";Shade=$(LAMP_SHADE);Base=$(LAMP_BASE);Height=$(LAMP_H);Stem_min=$(LAMP_STEM_MIN);Magnets=$(LAMP_MAGNETS),lamp_drum_$(LAMP_SHADE)))
+
+# -- Sofas: straight multi-seat tokens by width in cm (depth 90) — a 150 loveseat,
+#    a 200 three-seat and a 240 large — plus an L-shaped chaise sectional in both
+#    hands (chaise on the left or the right, seen from the front). Height is the top
+#    of the back over the seat it rises from (Seat); the chaise is a real L
+#    footprint, not a wider rectangle (see scad/livingroom/sofa.scad).
+SOFA_WIDTHS   := 150 200 240
+SOFA_DEPTH    ?= 90
+SOFA_H        ?= 85
+SOFA_SEAT     ?= 45
+SOFA_MAGNETS  ?= 2
+# the L-shaped chaise sectional: overall back-run width x how far the chaise reaches,
+# and the width of the chaise leg — one size, in both hands
+CHAISE_WIDTH  ?= 260
+CHAISE_DEPTH  ?= 160
+CHAISE_LEG    ?= 95
+CHAISE_HANDS  := left right
+$(foreach w,$(SOFA_WIDTHS),$(eval $(call part,livingroom,sofa,Width=$(w);Depth=$(SOFA_DEPTH);Height=$(SOFA_H);Seat=$(SOFA_SEAT);Magnets=$(SOFA_MAGNETS),sofa_$(w)x$(SOFA_DEPTH))))
+$(foreach h,$(CHAISE_HANDS),$(eval $(call part,livingroom,sofa,Chaise="$(h)";Width=$(CHAISE_WIDTH);Depth=$(SOFA_DEPTH);Chaise_depth=$(CHAISE_DEPTH);Chaise_width=$(CHAISE_LEG);Height=$(SOFA_H);Seat=$(SOFA_SEAT);Magnets=$(SOFA_MAGNETS),sofa_chaise_$(CHAISE_WIDTH)x$(CHAISE_DEPTH)_$(h))))
+
+# -- Extra living-room pieces, one default variant each, at their real heights in cm.
+#    The armchair carries two: the top of the back (Height) over the seat it rises
+#    from (Seat) — see armchair.scad.
+ARMCHAIR_H      ?= 80
+ARMCHAIR_SEAT   ?= 42
+TV_UNIT_H       ?= 45
+LR_SIDEBOARD_H  ?= 80
+LR_CONSOLE_H    ?= 80
+$(eval $(call part,livingroom,armchair,Height=$(ARMCHAIR_H);Seat=$(ARMCHAIR_SEAT);Magnets=1,armchair))
+$(eval $(call part,livingroom,tv_unit,Height=$(TV_UNIT_H);Magnets=2,tv_unit))
+$(eval $(call part,livingroom,sideboard,Height=$(LR_SIDEBOARD_H);Magnets=2,sideboard))
+$(eval $(call part,livingroom,console,Height=$(LR_CONSOLE_H);Magnets=2,console))
+
+# -- Bookshelves: open shelving (BILLY-style), one piece per common width x
+#    height in cm; depth stays 28 (the BILLY carcass). The shelves are a real
+#    recessed front, not a symbol engraved on top — printed on its BACK the
+#    dividers stand as clean vertical walls (see scad/livingroom/bookshelf.scad).
+BOOKSHELF_WIDTHS  := 40 60 80
+BOOKSHELF_HEIGHTS := 106 202
+BOOKSHELF_DEPTH   ?= 28
+# magnet pockets per shelf unit, in the bottom face (0 = none)
+BOOKSHELF_MAGNETS ?= 1
+$(foreach w,$(BOOKSHELF_WIDTHS),$(foreach h,$(BOOKSHELF_HEIGHTS),$(eval $(call part,livingroom,bookshelf,Width=$(w);Depth=$(BOOKSHELF_DEPTH);Height=$(h);Magnets=$(BOOKSHELF_MAGNETS),bookshelf_$(w)x$(h)))))
+
+LIVINGROOM_STLS := $(STLS_livingroom)
+LIVINGROOM_PNGS := $(LIVINGROOM_STLS:.stl=.png)
+
+.PHONY: livingroom
+livingroom: $(LIVINGROOM_STLS) $(LIVINGROOM_PNGS) ## render living-room parts + previews -> files/livingroom/
+
+# ---- Kitchen -----------------------------------------------------------------
+KITCHEN_DIR := $(FILES_DIR)/kitchen
+# Real heights in cm. Worktop, island, sink and the slot-in cooker all finish at the
+# 90 cm counter line; an integrated dishwasher's own carcass is 82; a bar stool puts
+# the seat at 65; the larder unit and the fridge run nearly floor to ceiling.
+WORKTOP_H    ?= 90
+ISLAND_H     ?= 90
+SINK_H       ?= 90
+COOKER_H     ?= 90
+DISHWASHER_H ?= 82
+BAR_STOOL_H  ?= 65
+K_CABINET_H  ?= 200
+FRIDGE_H     ?= 185
+$(eval $(call part,kitchen,worktop,Height=$(WORKTOP_H);Magnets=2,worktop))
+$(eval $(call part,kitchen,island,Height=$(ISLAND_H);Magnets=2,island))
+$(eval $(call part,kitchen,sink,Height=$(SINK_H);Magnets=2,sink))
+$(eval $(call part,kitchen,cooker,Height=$(COOKER_H);Magnets=1,cooker))
+$(eval $(call part,kitchen,dishwasher,Height=$(DISHWASHER_H);Magnets=1,dishwasher))
+$(eval $(call part,kitchen,bar_stool,Height=$(BAR_STOOL_H);Magnets=1,bar_stool))
+$(eval $(call part,kitchen,cabinet,Height=$(K_CABINET_H);Magnets=1,cabinet))
+$(eval $(call part,kitchen,fridge,Height=$(FRIDGE_H);Magnets=1,fridge))
+
+KITCHEN_STLS := $(STLS_kitchen)
+KITCHEN_PNGS := $(KITCHEN_STLS:.stl=.png)
+
+.PHONY: kitchen
+kitchen: $(KITCHEN_STLS) $(KITCHEN_PNGS) ## render kitchen parts + previews -> files/kitchen/
+
+# ---- Dining room -------------------------------------------------------------
+# The dining table lives here, alongside the seating and storage — every piece at
+# its real height in cm: table tops at 75, seats at 45, a buffet at 85 and a glazed
+# display cabinet at full 200 cm.
+DININGROOM_DIR := $(FILES_DIR)/diningroom
+
+# -- Tables: one piece per standard top, in cm, at dining-table height (TABLE_H=45
+#    renders the same tops as coffee tables). Rectangular tops are <width>x<depth>;
+#    a square top is the same thing with equal sides, listed apart only to read as a
+#    group.
+TABLE_RECT_SIZES   := 120x80 140x80 160x90 180x90 200x100
+TABLE_SQUARE_SIZES := 70x70 80x80 90x90
+#    Round tops, by diameter in cm.
+TABLE_ROUND_DIAMS  := 90 100 110 120
+TABLE_H            ?= 75
+# magnet pockets per table, in a row along the longer side (0 = none). A square or
+# round top has no longer side and no way to look skewed, so it gets a single
+# pocket in the middle instead of a row.
+TABLE_MAGNETS        ?= 2
+TABLE_CENTRE_MAGNETS ?= 1
+$(foreach s,$(TABLE_RECT_SIZES),$(eval $(call part,diningroom,table,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(TABLE_H);Magnets=$(TABLE_MAGNETS),table_$(s))))
+$(foreach s,$(TABLE_SQUARE_SIZES),$(eval $(call part,diningroom,table,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(TABLE_H);Magnets=$(TABLE_CENTRE_MAGNETS),table_$(s))))
+$(foreach d,$(TABLE_ROUND_DIAMS),$(eval $(call part,diningroom,table,Round=true;Diameter=$(d);Height=$(TABLE_H);Magnets=$(TABLE_CENTRE_MAGNETS),table_round_$(d))))
+
+# The chair carries two heights: the top of its back (Height) over the seat it rises
+# from (Seat) — see chair.scad.
+CHAIR_H           ?= 90
+CHAIR_SEAT        ?= 45
+DR_SIDEBOARD_H    ?= 85
+DR_BENCH_H        ?= 45
+DISPLAY_CABINET_H ?= 200
+$(eval $(call part,diningroom,chair,Height=$(CHAIR_H);Seat=$(CHAIR_SEAT);Magnets=1,chair))
+$(eval $(call part,diningroom,sideboard,Height=$(DR_SIDEBOARD_H);Magnets=2,sideboard))
+$(eval $(call part,diningroom,bench,Height=$(DR_BENCH_H);Magnets=2,bench))
+$(eval $(call part,diningroom,display_cabinet,Height=$(DISPLAY_CABINET_H);Magnets=2,display_cabinet))
+
+DININGROOM_STLS := $(STLS_diningroom)
+DININGROOM_PNGS := $(DININGROOM_STLS:.stl=.png)
+
+.PHONY: diningroom
+diningroom: $(DININGROOM_STLS) $(DININGROOM_PNGS) ## render dining-room parts + previews -> files/diningroom/
+
+# ---- Bathroom ----------------------------------------------------------------
+# Real heights in cm: a shower tray is floor level, a bath rim 58, a toilet cistern
+# 78, a vanity counter 85 and a storage column 180.
+BATHROOM_DIR := $(FILES_DIR)/bathroom
+
+# -- Bathtubs: <length>x<width> footprints in cm, in the two common shapes — a
+#    built-in rectangular tub and a freestanding oval one (sizes per
+#    twbathtub.com). The basin is a sunken hollow, so the tub reads as a bath and
+#    not as a tray; see scad/bathroom/bathtub.scad. Height is the real rim height —
+#    and at 1:40 that still leaves room for the tub's full 40 cm of hollow.
+BATHTUB_RECT_SIZES := 120x70 140x70 150x70 160x75 170x75 180x80
+BATHTUB_OVAL_SIZES := 95x60 120x60 125x65 150x70 170x75 180x80
+BATHTUB_H          ?= 58
+# magnet pockets per tub, in a row along the length (0 = none)
+BATHTUB_MAGNETS ?= 2
+$(foreach s,$(BATHTUB_RECT_SIZES),$(eval $(call part,bathroom,bathtub,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(BATHTUB_H);Magnets=$(BATHTUB_MAGNETS),bathtub_$(s))))
+$(foreach s,$(BATHTUB_OVAL_SIZES),$(eval $(call part,bathroom,bathtub,Oval=true;Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(BATHTUB_H);Magnets=$(BATHTUB_MAGNETS),bathtub_oval_$(s))))
+
+# -- Shower trays: <width>x<depth> footprints in cm — square trays plus a couple
+#    of rectangular ones, from a compact 80x80 through the common 90x90 / 80x120
+#    up to a 90x140 walk-in (size range per usacabinetstore.com standard-shower-
+#    sizes). Height is the real height of the tray — the pan plus the waste under
+#    it, floor level — which makes it the lowest piece in the catalogue by a long
+#    way. The pan is a real sunken floor with a sunk drain, not an engraved outline
+#    (see scad/bathroom/shower.scad) — but at 1:40 a 10 cm tray is only 2.5 mm tall,
+#    so nearly all of the recess is clamped away over the magnet pocket (the render
+#    log says how much): build with a larger SHOWER_H for a pan you can feel.
+SHOWER_SIZES := 80x80 90x90 100x100 120x120 80x120 90x140
+SHOWER_H     ?= 10
+# one central magnet pocket per tray is enough for a near-square piece (0 = none)
+SHOWER_MAGNETS ?= 1
+$(foreach s,$(SHOWER_SIZES),$(eval $(call part,bathroom,shower,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(SHOWER_H);Magnets=$(SHOWER_MAGNETS),shower_$(s))))
+
+# The toilet carries two heights: over the cistern (Height) and the bowl/seat in
+# front of it (Seat) — the token steps down at the join (see toilet.scad).
+TOILET_H     ?= 78
+TOILET_SEAT  ?= 40
+B_CABINET_H  ?= 180
+$(eval $(call part,bathroom,toilet,Height=$(TOILET_H);Seat=$(TOILET_SEAT);Magnets=1,toilet))
+$(eval $(call part,bathroom,cabinet,Height=$(B_CABINET_H);Magnets=1,cabinet))
+
+# -- Washbasins / vanity units: single-bowl by <width>x<depth> in cm (standard
+#    European vanity sizes — 40 cloakroom, 50/60 compact, 80 roomy), plus wider
+#    double-bowl units (Basins=2). Height is the real counter height; the bowl
+#    auto-sizes to each counter and its dished recess is real, not engraved (see
+#    washbasin.scad).
+WASHBASIN_SIZES   := 40x35 50x40 60x45 80x50
+WASHBASIN_DOUBLE  := 120x50 150x50
+WASHBASIN_H       ?= 85
+# magnet pockets per single unit, in a row along the width (0 = none). At 1:40
+# the 40x35 cloakroom is 8.75 mm deep — wide enough for a 4 mm disc — and the wider
+# doubles take the two they ask for.
+WASHBASIN_MAGNETS ?= 1
+$(foreach s,$(WASHBASIN_SIZES),$(eval $(call part,bathroom,washbasin,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Basins=1;Height=$(WASHBASIN_H);Magnets=$(WASHBASIN_MAGNETS),washbasin_$(s))))
+$(foreach s,$(WASHBASIN_DOUBLE),$(eval $(call part,bathroom,washbasin,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Basins=2;Height=$(WASHBASIN_H);Magnets=2,washbasin_double_$(s))))
+
+BATHROOM_STLS := $(STLS_bathroom)
+BATHROOM_PNGS := $(BATHROOM_STLS:.stl=.png)
+
+.PHONY: bathroom
+bathroom: $(BATHROOM_STLS) $(BATHROOM_PNGS) ## render bathroom parts + previews -> files/bathroom/
+
+# ---- Home office -------------------------------------------------------------
+# Real heights in cm: a desk top at 74 with its pedestal at 72 underneath, a swivel
+# chair's back at 95 over a 47 cm seat.
+OFFICE_DIR := $(FILES_DIR)/office
+DESK_H            ?= 74
+OFFICE_CHAIR_H    ?= 95
+OFFICE_CHAIR_SEAT ?= 47
+FILING_CABINET_H  ?= 72
+$(eval $(call part,office,desk,Height=$(DESK_H);Magnets=2,desk))
+$(eval $(call part,office,chair,Height=$(OFFICE_CHAIR_H);Seat=$(OFFICE_CHAIR_SEAT);Magnets=1,chair))
+$(eval $(call part,office,filing_cabinet,Height=$(FILING_CABINET_H);Magnets=1,filing_cabinet))
+
+OFFICE_STLS := $(STLS_office)
+OFFICE_PNGS := $(OFFICE_STLS:.stl=.png)
+
+.PHONY: office
+office: $(OFFICE_STLS) $(OFFICE_PNGS) ## render home-office parts + previews -> files/office/
+
+# ---- Hallway / entrance ------------------------------------------------------
+# Real heights in cm: a shoe cabinet three flaps high, a console at 80, a bench at
+# seat height and a hall tree up at coat-hook height.
+HALLWAY_DIR := $(FILES_DIR)/hallway
+SHOE_CABINET_H ?= 100
+HL_CONSOLE_H   ?= 80
+HL_BENCH_H     ?= 45
+COAT_RACK_H    ?= 180
+$(eval $(call part,hallway,shoe_cabinet,Height=$(SHOE_CABINET_H);Magnets=2,shoe_cabinet))
+$(eval $(call part,hallway,console,Height=$(HL_CONSOLE_H);Magnets=2,console))
+$(eval $(call part,hallway,bench,Height=$(HL_BENCH_H);Magnets=2,bench))
+$(eval $(call part,hallway,coat_rack,Height=$(COAT_RACK_H);Magnets=1,coat_rack))
+
+HALLWAY_STLS := $(STLS_hallway)
+HALLWAY_PNGS := $(HALLWAY_STLS:.stl=.png)
+
+.PHONY: hallway
+hallway: $(HALLWAY_STLS) $(HALLWAY_PNGS) ## render hallway parts + previews -> files/hallway/
+
+# ---- Kids room ---------------------------------------------------------------
+# Real heights in cm: a cot rail at 90, a changing surface at the same, cube storage
+# two 39 cm cubes high, and the bunk bed up at 165 over its top guard rail — as tall
+# as a wardrobe on a single bed's footprint.
+KIDSROOM_DIR := $(FILES_DIR)/kidsroom
+COT_H            ?= 90
+CHANGING_TABLE_H ?= 90
+CUBE_STORAGE_H   ?= 77
+BUNK_BED_H       ?= 165
+$(eval $(call part,kidsroom,cot,Height=$(COT_H);Magnets=2,cot))
+$(eval $(call part,kidsroom,changing_table,Height=$(CHANGING_TABLE_H);Magnets=2,changing_table))
+$(eval $(call part,kidsroom,cube_storage,Height=$(CUBE_STORAGE_H);Magnets=2,cube_storage))
+$(eval $(call part,kidsroom,bunk_bed,Height=$(BUNK_BED_H);Magnets=2,bunk_bed))
+
+KIDSROOM_STLS := $(STLS_kidsroom)
+KIDSROOM_PNGS := $(KIDSROOM_STLS:.stl=.png)
+
+.PHONY: kidsroom
+kidsroom: $(KIDSROOM_STLS) $(KIDSROOM_PNGS) ## render kids-room parts + previews -> files/kidsroom/
+
+# ---- Laundry / utility -------------------------------------------------------
+# Real heights in cm: washer and dryer are both 85 cm cases (under-worktop height),
+# the stacked tower is two of them (170), the sink rim is at 90, and open racking
+# runs up to 180.
+LAUNDRY_DIR := $(FILES_DIR)/laundry
+WASHING_MACHINE_H     ?= 85
+TUMBLE_DRYER_H        ?= 85
+WASHER_DRYER_STACK_H  ?= 170
+UTILITY_SINK_H        ?= 90
+STORAGE_SHELVING_H    ?= 180
+$(eval $(call part,laundry,washing_machine,Height=$(WASHING_MACHINE_H);Magnets=1,washing_machine))
+$(eval $(call part,laundry,tumble_dryer,Height=$(TUMBLE_DRYER_H);Magnets=1,tumble_dryer))
+$(eval $(call part,laundry,washer_dryer_stack,Height=$(WASHER_DRYER_STACK_H);Magnets=2,washer_dryer_stack))
+$(eval $(call part,laundry,utility_sink,Height=$(UTILITY_SINK_H);Magnets=1,utility_sink))
+$(eval $(call part,laundry,storage_shelving,Height=$(STORAGE_SHELVING_H);Magnets=2,storage_shelving))
+
+LAUNDRY_STLS := $(STLS_laundry)
+LAUNDRY_PNGS := $(LAUNDRY_STLS:.stl=.png)
+
+.PHONY: laundry
+laundry: $(LAUNDRY_STLS) $(LAUNDRY_PNGS) ## render laundry parts + previews -> files/laundry/
+
+# ---- Balcony / outdoor -------------------------------------------------------
+# Real heights in cm: a garden table at 74, the seating with its back over its seat
+# (see chair.scad / sofa.scad), and a 40 cm pot — build it at 80+ for a tree.
+OUTDOOR_DIR := $(FILES_DIR)/outdoor
+OD_TABLE_H     ?= 74
+OD_CHAIR_H     ?= 85
+OD_CHAIR_SEAT  ?= 42
+OD_SOFA_H      ?= 80
+OD_SOFA_SEAT   ?= 42
+PLANTER_H      ?= 40
+$(eval $(call part,outdoor,table,Height=$(OD_TABLE_H);Magnets=1,table))
+$(eval $(call part,outdoor,chair,Height=$(OD_CHAIR_H);Seat=$(OD_CHAIR_SEAT);Magnets=1,chair))
+$(eval $(call part,outdoor,sofa,Height=$(OD_SOFA_H);Seat=$(OD_SOFA_SEAT);Magnets=2,sofa))
+$(eval $(call part,outdoor,planter,Height=$(PLANTER_H);Magnets=1,planter))
+
+OUTDOOR_STLS := $(STLS_outdoor)
+OUTDOOR_PNGS := $(OUTDOOR_STLS:.stl=.png)
+
+.PHONY: outdoor
+outdoor: $(OUTDOOR_STLS) $(OUTDOOR_PNGS) ## render outdoor parts + previews -> files/outdoor/
+
+# ---- Walls / structure -------------------------------------------------------
+# Straight interior wall segments: <thickness>x<length> footprints in cm. One
+# non-load-bearing partition thickness (11.5 half-brick) and two load-bearing
+# interior ones (17.5, 24) — they read apart by how thick they are, with the
+# thickness engraved on top (at 1:40 only the load-bearing walls are wide enough to
+# carry it — 4.4 and 6 mm across; the 11.5 cm partition is a 2.875 mm ribbon and
+# comes out plain, with a warning).
+# Square-ended, so segments butt
+# flush and corners meet. A wall stands a touch above the furniture but not as
+# tall as the "high" tier, so wardrobes still read against it and the ribbon is
+# less tippy: it gets its own height, just above medium (see wall.scad).
+WALLS_DIR := $(FILES_DIR)/walls
+WALL_THICKNESSES := 11.5 17.5 24
+WALL_LENGTHS     := 25 50 100 150 200 300
+WALL_H           ?= 7
+# Magnet pockets per wall (0 = none). A wall is a thin ribbon — 2.875..6 mm across
+# printed at 1:40 — so the load-bearing walls drop to the small 2x1 disc (see
+# MAGNET_D_SMALL) and the 11.5 cm partition is too thin for even that: it prints
+# solid, with a warning. The 25 cm segments only fit one of the two pockets.
+WALL_MAGNETS ?= 2
+$(foreach t,$(WALL_THICKNESSES),$(foreach l,$(WALL_LENGTHS),$(eval $(call part,walls,wall,Thickness=$(t);Length=$(l);Height=$(WALL_H);Magnets=$(WALL_MAGNETS),wall_$(t)x$(l)))))
+
+# -- Openings: windows and doorways, as short segments that butt between the plain
+#    ones — [ wall 100 ][ window 100 ][ wall 50 ] — so an opening can go anywhere in
+#    a run and the catalogue stays one part per size per thickness. Each is the
+#    opening plus a pier (OPENING_REVEAL) at each end, at the same thickness and
+#    printed height as a plain wall. The ribbon drops across the opening: to a sill
+#    under a window (with the glass line engraved along it) and lower still to a
+#    threshold under a door, so the two read apart by touch as well as from above.
+#    A door then carries that threshold on into the room as the quarter circle the
+#    leaf sweeps (DOOR_SWING), so the piece occupies the floor the door needs and
+#    nothing can be planned into it. Sizes are the German standards — windows on the
+#    1/8 m series they are sold in, doors the DIN 18101 masonry opening (Rohbaumass)
+#    for the 61/73.5/86/98.5/111 cm leaves. DOOR_HANDS is which end the hinge is on;
+#    turning a segment round in the plan gives the other two hands (see door.scad).
+OPENING_REVEAL   ?= 12.5
+WINDOW_WIDTHS    := 60 80 100 120 140 160 180
+WINDOW_SILL_H    ?= 2.5
+DOOR_WIDTHS      := 62.5 75 87.5 100 112.5
+DOOR_HANDS       := left right
+DOOR_THRESHOLD_H ?= 1.5
+# false = a plain opening, with the swing arc engraved in the threshold instead
+DOOR_SWING       ?= true
+# Magnet pockets per pier (0 = none). A pier is only 3.1 mm long at 1:40 — too small
+# for even the 2x1 disc, so no pocket is cut and every opening segment says so in the
+# render log; an opening is held by the run it butts into. Set this to 0 to stop
+# asking (see MAGNET_D_SMALL).
+OPENING_MAGNETS  ?= 1
+$(foreach t,$(WALL_THICKNESSES),$(foreach w,$(WINDOW_WIDTHS),$(eval $(call part,walls,window,Thickness=$(t);Width=$(w);Reveal=$(OPENING_REVEAL);Height=$(WALL_H);Sill_h=$(WINDOW_SILL_H);Magnets=$(OPENING_MAGNETS),window_$(t)x$(w)))))
+$(foreach t,$(WALL_THICKNESSES),$(foreach w,$(DOOR_WIDTHS),$(foreach h,$(DOOR_HANDS),$(eval $(call part,walls,door,Thickness=$(t);Width=$(w);Reveal=$(OPENING_REVEAL);Height=$(WALL_H);Threshold_h=$(DOOR_THRESHOLD_H);Hand="$(h)";Swing_plate=$(DOOR_SWING);Magnets=$(OPENING_MAGNETS),door_$(t)x$(w)_$(h))))))
+
+WALLS_STLS := $(STLS_walls)
+WALLS_PNGS := $(WALLS_STLS:.stl=.png)
+
+.PHONY: walls
+walls: $(WALLS_STLS) $(WALLS_PNGS) ## render wall segments, windows + doors -> files/walls/
+
+#------------------------------------------------------------------------------------------
+# Generic recipes. Each concrete target supplies its own SRC + PARAMS (see room blocks).
+#   %.stl -> geometry;  %.png -> OpenSCAD image, trimmed + margined via ImageMagick.
+#------------------------------------------------------------------------------------------
+%.stl: | check-openscad
+	@mkdir -p "$(@D)"
+	@echo ">> rendering $@"
+	@$(OPENSCAD) -o "$@" -D '$(PARAMS)' "$(SRC)"
+
+%.png: | check-openscad check-convert
+	@mkdir -p "$(@D)"
+	@echo ">> rendering preview $@"
+	@$(OPENSCAD) -o "$(@:.png=.raw.png)" $(IMG_OPTS) -D '$(PARAMS)' "$(SRC)"
+	@$(CONVERT) "$(@:.png=.raw.png)" -fuzz 3% -trim +repage -bordercolor '$(IMG_BG)' -border $(IMG_MARGIN) "$@"
+	@rm -f "$(@:.png=.raw.png)"
+
+#==========================================================================================
+##@ Utilities
+#==========================================================================================
+ALL_STLS := $(BEDROOM_STLS) $(LIVINGROOM_STLS) $(KITCHEN_STLS) $(DININGROOM_STLS) \
+            $(BATHROOM_STLS) $(OFFICE_STLS) $(HALLWAY_STLS) $(KIDSROOM_STLS) \
+            $(LAUNDRY_STLS) $(OUTDOOR_STLS) $(WALLS_STLS)
+
+.PHONY: list
+list: ## list every declared part and the .scad it renders from
+	@printf '%-42s %s\n' "OUTPUT" "SOURCE"
+	@$(foreach f,$(ALL_STLS),printf '%-42s %s\n' "$(f)" "$(SRCOF_$(f))";)
+
+#==========================================================================================
+##@ Cleaning
+#==========================================================================================
+.PHONY: clean-bedroom
+clean-bedroom: ## remove rendered bedroom files (files/bedroom/)
+	@rm -rf "$(BEDROOM_DIR)"
+	@echo "✅ removed $(BEDROOM_DIR)"
+
+.PHONY: clean-livingroom
+clean-livingroom: ## remove rendered living-room files (files/livingroom/)
+	@rm -rf "$(LIVINGROOM_DIR)"
+	@echo "✅ removed $(LIVINGROOM_DIR)"
+
+.PHONY: clean-kitchen
+clean-kitchen: ## remove rendered kitchen files (files/kitchen/)
+	@rm -rf "$(KITCHEN_DIR)"
+	@echo "✅ removed $(KITCHEN_DIR)"
+
+.PHONY: clean-diningroom
+clean-diningroom: ## remove rendered dining-room files (files/diningroom/)
+	@rm -rf "$(DININGROOM_DIR)"
+	@echo "✅ removed $(DININGROOM_DIR)"
+
+.PHONY: clean-bathroom
+clean-bathroom: ## remove rendered bathroom files (files/bathroom/)
+	@rm -rf "$(BATHROOM_DIR)"
+	@echo "✅ removed $(BATHROOM_DIR)"
+
+.PHONY: clean-office
+clean-office: ## remove rendered home-office files (files/office/)
+	@rm -rf "$(OFFICE_DIR)"
+	@echo "✅ removed $(OFFICE_DIR)"
+
+.PHONY: clean-hallway
+clean-hallway: ## remove rendered hallway files (files/hallway/)
+	@rm -rf "$(HALLWAY_DIR)"
+	@echo "✅ removed $(HALLWAY_DIR)"
+
+.PHONY: clean-kidsroom
+clean-kidsroom: ## remove rendered kids-room files (files/kidsroom/)
+	@rm -rf "$(KIDSROOM_DIR)"
+	@echo "✅ removed $(KIDSROOM_DIR)"
+
+.PHONY: clean-laundry
+clean-laundry: ## remove rendered laundry files (files/laundry/)
+	@rm -rf "$(LAUNDRY_DIR)"
+	@echo "✅ removed $(LAUNDRY_DIR)"
+
+.PHONY: clean-outdoor
+clean-outdoor: ## remove rendered outdoor files (files/outdoor/)
+	@rm -rf "$(OUTDOOR_DIR)"
+	@echo "✅ removed $(OUTDOOR_DIR)"
+
+.PHONY: clean-walls
+clean-walls: ## remove rendered wall files (files/walls/)
+	@rm -rf "$(WALLS_DIR)"
+	@echo "✅ removed $(WALLS_DIR)"
+
+.PHONY: clean
+clean: clean-bedroom clean-livingroom clean-kitchen clean-diningroom clean-bathroom \
+       clean-office clean-hallway clean-kidsroom clean-laundry clean-outdoor clean-walls ## remove all rendered files
+
+# FORCE (always out of date) is only pulled in when REBUILD=1.
+.PHONY: FORCE
+FORCE:
+
+.PHONY: check-openscad
+check-openscad:
+	@command -v $(OPENSCAD) >/dev/null 2>&1 || { echo "❌ '$(OPENSCAD)' not found — install OpenSCAD or set OPENSCAD=<path>"; exit 1; }
+
+.PHONY: check-convert
+check-convert:
+	@command -v $(CONVERT) >/dev/null 2>&1 || { echo "❌ '$(CONVERT)' (ImageMagick) not found — needed for preview images, or set CONVERT=<path>"; exit 1; }
+
+#==========================================================================================
+#  Help
+#==========================================================================================
+.PHONY: help
+help: # Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
