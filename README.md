@@ -3,14 +3,14 @@
 
 ## Scale
 
-Everything is drawn at **1:50** — the same scale as the paper plans in
-`base.svg` (A4, 210 mm ≈ 10.5 m of real room):
+Everything is drawn at **1:40** — 25 mm on the plan = 1 m of real room, so an A5
+sheet holds about a 50 m² flat and an A4 about 100 m²:
 
 | real | on the plan |
 |---|---|
-| 1 m | 20 mm |
-| 1 cm | 0.2 mm |
-| a 160x200 bed | 32 x 40 mm |
+| 1 m | 25 mm |
+| 1 cm | 0.25 mm |
+| a 160x200 bed | 40 x 50 mm |
 
 Parts are modelled in **real-world centimetres** and shrunk on the way out, so a
 `.scad` reads like a furniture spec sheet (`Width = 160; Length = 200;`) instead
@@ -25,7 +25,108 @@ To render at another scale, override it in one place — the Makefile passes it
 down to every part:
 
 ```sh
-make bedroom SCALE=25     # or: openscad -D Scale=25 ...
+make bedroom SCALE=50     # or: openscad -D Scale=50 ...
+```
+
+## Heights
+
+Heights are to scale too: a part declares the real height of the furniture it
+stands for, in centimetres, and it is shrunk by the same 1:40 as its footprint.
+So the set is a scale model, not a set of tiers — the pieces stand to each other
+exactly as the furniture does:
+
+| piece | real | printed |
+|---|---|---|
+| shower tray | 10 cm | 2.5 mm |
+| bed (top of the mattress) | 50 cm | 12.5 mm |
+| dining table | 75 cm | 18.75 mm |
+| kitchen worktop | 90 cm | 22.5 mm |
+| fridge-freezer | 185 cm | 46.25 mm |
+| PAX wardrobe frame | 236 cm | 59 mm |
+
+Anything that stands **on** a piece is real too — a sofa is a 45 cm seat with the
+back rising to 85 and the arms to 65, a bed is a mattress with 10 cm pillows on
+it, a bath is a 58 cm rim around a 40 cm hollow, a toilet is a 40 cm bowl in
+front of a 78 cm cistern. Only drawing detail stays in printed millimetres:
+engraved symbols, grooves and magnet pockets are ink and hardware, not furniture.
+
+`scad/lib/common.scad` does the conversion, next to `cm()`:
+
+```openscad
+function rise(v)      = cm(v) * Height_scale;         // a cushion, a mirror board
+function printed_h(v) = max(Height_min, rise(v));     // a whole piece
+```
+
+Two knobs act on every part at once, and each part's own height is a Makefile
+variable in cm:
+
+```sh
+make all HEIGHT_SCALE=0.75      # every piece three quarters as tall, same order
+make all HEIGHT_MIN=3           # nothing prints thinner than 3 mm
+make bedroom PAX_H=201          # the short PAX frame instead of the tall one
+make diningroom TABLE_H=45      # the dining tops as coffee tables
+```
+
+`Height_min` is the floor a piece may not print below, whatever its real height
+says: a magnet pocket (1.2 mm) plus material over it. At 1:40 the shower tray
+(2.5 mm) sits right on top of it. Where a hollow no longer fits the height above a
+pocket — a bath basin, a shower pan — the part sinks what it can and says so in the
+render log; at this scale a 10 cm tray gives up almost all of its recess, so build
+the trays taller (`SHOWER_H`) if you want a pan you can feel.
+
+## Walls and openings
+
+A room's shell is built from square-ended segments that butt flush, so a run is
+assembled from the catalogue rather than printed in one piece:
+
+```
+[ wall 100 ][ window 100 ][ wall 50 ][ door 87.5 left ][ wall 25 ]
+```
+
+| part | real sizes (cm) | files |
+|---|---|---|
+| `wall` | thickness 11.5 / 17.5 / 24, length 25–300 | 18 |
+| `window` | opening 60–180 in 20 cm steps | 21 |
+| `door` | opening 62.5 / 75 / 87.5 / 100 / 112.5, two hands | 30 |
+
+Thicknesses are the German standards — 11.5 cm half-brick partition, 17.5 and
+24 cm load-bearing — and a plain segment carries its thickness engraved on top
+(all but the 11.5 cm partition, a 2.875 mm ribbon at 1:40: too thin for a legible
+number, so it comes out plain).
+Door openings are DIN 18101 masonry sizes (*Rohbaumaß*), for the 61 / 73.5 / 86 /
+98.5 / 111 cm leaves sold to fit them; window widths are the 1/8 m series.
+
+Walls are the one exception to scaled heights, on purpose: **7 mm printed**, not a
+scaled 250 cm ceiling (which would be a 62.5 mm ribbon you could not see the room
+past, with openings needing bridged lintels instead of the sill/threshold drop
+below). So a wall stands proud of the worktops and chests, a PAX still reads well
+above it, and the thin ribbon is less tippy. An opening segment is the opening
+plus a 12.5 cm pier at
+each end (`OPENING_REVEAL`), and across the opening the ribbon **drops** — so you
+can see and feel a hole in the wall, not just read a line from above:
+
+| | left under the opening | drawn on it |
+|---|---|---|
+| window | 2.5 mm sill | the glass line |
+| door | 1.5 mm threshold | the closed leaf |
+
+A door then **occupies its swing**: the threshold carries on into the room as the
+quarter circle the leaf sweeps, so the outline of the piece is the arc a plan
+would draw, and the floor the door needs is taken — you cannot put a wardrobe
+where it has to open. The radius is the leaf, not the opening (`Frame`, 15 mm in
+DIN 18101), so the plate stops just short of the far jamb and the segment still
+butts flush between plain ones.
+
+`Hand` is which end the hinge is on; turning a door segment round in the plan
+swaps hinge end *and* the room it opens into, so `left` and `right` cover all
+four hands.
+
+```sh
+make walls                            # all 69 parts
+make walls WALL_H=9                   # a taller ribbon (printed mm, not cm)
+make walls OPENING_REVEAL=25          # wider piers either side of an opening
+make walls WINDOW_SILL_H=4            # a shallower drop under a window
+make walls DOOR_SWING=false           # plain openings, swing arc engraved instead
 ```
 
 ## Magnets
@@ -40,38 +141,58 @@ solid, with a warning).
 difference() { footprint(160, 200, 6); magnets(160, 200, 2); }
 ```
 
-Sizing, per magnet, flush against a painted steel whiteboard:
+**Two discs, both 1 mm high** — so every pocket is the same depth and there are
+only two kinds of magnet to buy:
 
-| disc | pull | notes |
+| disc | pull | goes in |
 |---|---|---|
-| 2 x 1 mm | ~20 g | fine on a **flat** board, too weak on a wall |
-| 5 x 1 mm | ~130 g | best value — 1 mm deep in a 6 mm piece |
-| 3 x 2 mm | ~200 g | fits the small tokens |
+| 4 x 1 mm | ~90 g | everything wide enough for it — the standard |
+| 2 x 1 mm | ~20 g | pieces too narrow for a 4 mm pocket |
+
+`magnets()` chooses per piece: the 4 mm disc where the footprint is at least
+6.3 mm across (25.2 cm of real furniture at 1:40), the 2 mm one below that, and
+solid below 4.3 mm (17.2 cm). A piece that drops to the small disc says so in
+the render log — that is how you know which magnet to drop into which part:
+
+```
+NOTE: 200x17.5 cm at 1:40 is too narrow for a 4 mm disc — cut for 2 2x1 mm
+```
+
+Every piece of furniture in the catalogue clears 25.2 cm on its short side, so it
+takes the 4 mm disc. The walls do not: at 1:40 the 17.5 and 24 cm segments drop to
+the 2 mm disc, and the 11.5 cm partitions and the 12.5 cm piers of every window and
+door are too narrow for even that — they print solid and say so, and are held in a
+run by the segments they butt against.
 
 On a **vertical** board what holds a piece up is friction, not pull: roughly
-`0.3 x pull`, so ~20 g of pull carries ~6 g — about what a 160x200 bed weighs.
-Aim well above that.
+`0.3 x pull`, so a 4 mm disc's ~90 g carries ~27 g and a 2 mm one ~6 g. Since the
+pieces went to scaled heights they are solid blocks rather than plates — a 160x200
+bed is 40 x 50 x 12.5 mm — and a big one printed solid weighs more than that on its
+own. Lay the board flat, or print sparse infill and give the wide pieces more than
+one pocket.
 
 Defaults live in `scad/lib/common.scad` and are overridable per build:
 
 ```sh
-make bedroom MAGNET_D=3 MAGNET_H=2   # 3x2 discs
-make bedroom BED_MAGNETS=0           # no pockets
-make bedroom PAX_MAGNETS=0           # ditto, PAX wardrobes
-make bedroom HEMNES_MAGNETS=1        # one pocket per HEMNES chest instead of two
+make all MAGNET_D=5 MAGNET_D_SMALL=3   # bigger discs, if that is what you have
+make all MAGNET_FIT=0.4                # pockets too tight? widen them
+make bedroom BED_MAGNETS=0             # no pockets
+make bedroom PAX_MAGNETS=0             # ditto, PAX wardrobes (wide frames included)
+make bedroom PAX_WIDE_MAGNETS=1        # one pocket on the 100 cm frames too
+make bedroom HEMNES_MAGNETS=1          # one pocket per HEMNES chest instead of two
+make diningroom TABLE_MAGNETS=0        # ditto, dining-room tables
+make walls WALL_MAGNETS=0              # ditto, wall segments
 ```
-
-A pocket needs the piece to be about 7.6 mm across for a 5 mm disc, so at 1:50
-the 35 cm-deep IKEA PAX wardrobe frames (7 mm) render solid with a warning —
-build those with `MAGNET_D=3 MAGNET_H=2`.
 
 Printing and assembly:
 
 - the pocket opens at the **bottom**, so the magnet touches the steel directly
   (0.4 mm of plastic in the gap costs a small disc half its pull) and nothing has
   to bridge — no mid-print pause, drop the magnet in afterwards
-- `Magnet_fit = 0.2` is added to the diameter for a press fit; a drop of CA glue
-  keeps it there, and the depth equals the magnet height so it sits flush
+- a pocket is cut `Magnet_fit = 0.3` mm wider and `Magnet_fit_h = 0.2` mm deeper
+  than the disc, because an FDM hole prints undersize: the magnet drops in by
+  hand, a spot of CA glue holds it, and it can never stand proud of the bottom
+  face and make the piece rock
 - insert every magnet the same way up: neighbouring pieces then repel gently
   instead of snapping together and skewing the layout
 
