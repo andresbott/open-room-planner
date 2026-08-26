@@ -163,8 +163,8 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
 
 ## Walls
 - [x] Interior wall segments
-  a 7 mm printed ribbon, not a scaled ceiling (the one exception — see the README); non-bearing 11.5, load-bearing 17.5/24 cm thick; lengths 25/50/100/150/200/300 - scad/walls/wall.scad
+  a 12.5 mm printed ribbon, not a scaled ceiling (the one exception — see the README); non-bearing 11.5, load-bearing 17.5/24 cm thick; lengths 25/50/100/150/200/300, each engraved on the segment's face - scad/walls/wall.scad
 - [x] Window segments
-  wall height, drops to a 2.5 mm sill across the opening with the glass line on it; openings 60-180 cm (1/8 m series), 12.5 cm pier either side - scad/walls/window.scad
+  wall height, drops to a 4.5 mm sill across the opening with the glass line on it; openings 60-180 cm (1/8 m series), 20 cm pier either side (long enough to take a magnet) - scad/walls/window.scad
 - [x] Door segments
-  wall height, drops to a 1.5 mm threshold that carries on into the room as the quarter circle the leaf sweeps, so the piece occupies the swing; openings 62.5/75/87.5/100/112.5 cm (DIN 18101 Rohbaumass), left/right hand - scad/walls/door.scad
+  wall height, drops to a 2.7 mm threshold that carries on into the room as the quarter circle the leaf sweeps, so the piece occupies the swing, with the opening width engraved on that plate; openings 62.5/75/87.5/100/112.5 cm (DIN 18101 Rohbaumass), left/right hand - scad/walls/door.scad

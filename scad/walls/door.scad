@@ -28,9 +28,9 @@ include <../lib/common.scad>
 Thickness = 11.5;   // cm — 11.5 partition, 17.5/24 load-bearing
 Width     = 87.5;   // cm — the masonry opening
 Frame     = 1.5;    // cm — opening less leaf (DIN 18101)
-Reveal    = 12.5;   // cm — pier of wall either side of it
-Height    = 7;      // PRINTED mm — as wall.scad
-Threshold_h = 1.5;  // printed mm — lower than a window sill (see window.scad)
+Reveal    = 20;     // cm — pier of wall either side of it (as window.scad)
+Height    = 12.5;   // PRINTED mm — as wall.scad
+Threshold_h = 2.7;  // printed mm — lower than a window sill (see window.scad)
 
 Hand = "left";      // "left" or "right" — which end carries the hinge
 
@@ -42,11 +42,20 @@ Hand = "left";      // "left" or "right" — which end carries the hinge
 Swing_plate = true;
 // The closed leaf, engraved along the face it sits against.
 Show_leaf = true;
+// Engrave the opening width on the floor the leaf sweeps — the one big flat surface a
+// door segment has, and the same number the file is named for, so a doorway can be
+// picked out of the box by reading it. On a plain opening (Swing_plate = false) there
+// is no plate, so it goes on the threshold behind the leaf line instead, as far as the
+// wall thickness allows. Shrunk to fit either, and left off with a warning where that
+// would come out a blob.
+Show_label = true;
 
-// Magnet pockets in the bottom face, per pier (0 = none) — as window.scad. The swing
-// plate is only Threshold_h thick, too thin to sink a pocket into, so the piers are
-// the only place one could go — and at 1:40 a 12.5 cm pier is 3.1 mm long, too small
-// for even the 2 mm disc: nothing is cut, and the render log says so.
+// Magnet pockets in the bottom face, one per pier (0 = none) — as window.scad: at the
+// two ends, where the segment butts its neighbours, and not under the threshold or the
+// swing plate, which are meant to read as floor. The piers are therefore what sets
+// Reveal: 20 cm, the first round number past the 17.2 cm a pocket needs at 1:40. On the
+// 11.5 cm partition the pier is still too thin across, so it gets a pad under each
+// pocket (magnet_pads() in lib/common.scad); the thicker walls take it as they are.
 Magnets = 1;
 
 door();
@@ -60,9 +69,11 @@ module door() {
             for (s = [-1, 1])
                 translate([s * cm(Width + Reveal) / 2, 0, 0])
                     footprint(Reveal, Thickness, Height, r = 0);
+            if (Magnets > 0) pier_pads();
         }
         if (Show_leaf) leaf(Threshold_h);
         if (!Swing_plate) swing_arc(Threshold_h);
+        if (Show_label) door_label(Threshold_h);
         if (Magnets > 0) pier_magnets();
     }
 }
@@ -115,9 +126,49 @@ module swing_arc(top_z, stroke = Symbol_stroke, depth = Label_depth) {
                  " is too thin for a door swing arc — leaf only"));
 }
 
+// The opening width cut into the floor the leaf sweeps: out on the bisector of the
+// quadrant, half a leaf from the hinge, where the plate is at its widest and the leaf
+// line and the jambs are all well clear. Sized to the room left between there and the
+// arc, and dropped below the legibility floor like every other engraving.
+// Without a plate there is only the threshold to put it on: centred along the segment,
+// in the band behind the leaf line, which on a thin wall is nothing at all.
+module door_label(top_z) {
+    txt = str(Width);
+    if (Swing_plate) {
+        r    = cm(leaf_w());
+        c    = 0.5 * r;                                  // how far out it sits
+        room = r - Symbol_margin - c * sqrt(2);          // ... and what is left past it
+        size = label_size_free(room, txt);
+        if (size >= Symbol_min)
+            translate([hinge()[0] - hinge_dir() * c, hinge()[1] - c, 0])
+                label(txt, top_z, size = size);
+        else
+            echo(str("WARNING: a ", Width, " cm door at 1:", Scale,
+                     " leaves too little swing plate to engrave its width"));
+    } else {
+        // the leaf line runs along the front face; the number goes behind it
+        y0   = -(cm(Thickness) / 2 - Symbol_margin - Symbol_stroke) + Symbol_margin;
+        y1   = cm(Thickness) / 2 - Symbol_margin;
+        w    = cm(Width) - 2 * Symbol_margin;
+        size = label_size(w, y1 - y0, txt);
+        if (size >= Symbol_min)
+            translate([0, (y0 + y1) / 2, 0]) label(txt, top_z, size = size);
+        else
+            echo(str("WARNING: a ", Thickness, " cm wall at 1:", Scale,
+                     " is too thin to engrave a door width on its threshold"));
+    }
+}
+
 // One pocket centred in each pier, as window.scad.
 module pier_magnets() {
     for (s = [-1, 1])
         translate([s * cm(Width + Reveal) / 2, 0, 0])
-            magnets(Reveal, Thickness, Magnets);
+            magnets(Reveal, Thickness, Magnets, pad = true);
+}
+
+// ... and the material a wall too thin to hold one needs under it, as window.scad.
+module pier_pads() {
+    for (s = [-1, 1])
+        translate([s * cm(Width + Reveal) / 2, 0, 0])
+            magnet_pads(Reveal, Thickness, Magnets);
 }
