@@ -473,22 +473,24 @@ outdoor: $(OUTDOOR_STLS) $(OUTDOOR_PNGS) ## render outdoor parts + previews -> f
 # ---- Walls / structure -------------------------------------------------------
 # Straight interior wall segments: <thickness>x<length> footprints in cm. One
 # non-load-bearing partition thickness (11.5 half-brick) and two load-bearing
-# interior ones (17.5, 24) — they read apart by how thick they are, with the
-# thickness engraved on top (at 1:40 only the load-bearing walls are wide enough to
-# carry it — 4.4 and 6 mm across; the 11.5 cm partition is a 2.875 mm ribbon and
-# comes out plain, with a warning).
-# Square-ended, so segments butt
-# flush and corners meet. A wall stands a touch above the furniture but not as
-# tall as the "high" tier, so wardrobes still read against it and the ribbon is
-# less tippy: it gets its own height, just above medium (see wall.scad).
+# interior ones (17.5, 24) — they read apart by how thick they are, and each segment
+# carries its LENGTH engraved on one face (not on top: the face is the big surface on a
+# piece this shape, so every segment can carry it, the 2.875 mm 11.5 cm partition and
+# the 25 cm stub included — see wall.scad).
+# Square-ended, so segments butt flush and corners meet. A wall is the one part whose
+# height is PRINTED mm rather than a scaled real height (see wall.scad): 12.5 mm, the
+# bed line at 1:40 — enough to read as a wall around the low pieces, low enough that a
+# worktop (22.5 mm) or a wardrobe (59) still stands clear and you can see over it.
 WALLS_DIR := $(FILES_DIR)/walls
 WALL_THICKNESSES := 11.5 17.5 24
 WALL_LENGTHS     := 25 50 100 150 200 300
-WALL_H           ?= 7
+WALL_H           ?= 12.5
 # Magnet pockets per wall (0 = none). A wall is a thin ribbon — 2.875..6 mm across
 # printed at 1:40 — so the load-bearing walls drop to the small 2x1 disc (see
-# MAGNET_D_SMALL) and the 11.5 cm partition is too thin for even that: it prints
-# solid, with a warning. The 25 cm segments only fit one of the two pockets.
+# MAGNET_D_SMALL), and the 11.5 cm partition, too thin for even that, gets a low round
+# pad under each pocket instead of going without (a touch proud of both faces near the
+# floor; the render log says which pieces are padded). The 25 cm segments only fit one
+# of the two pockets.
 WALL_MAGNETS ?= 2
 $(foreach t,$(WALL_THICKNESSES),$(foreach l,$(WALL_LENGTHS),$(eval $(call part,walls,wall,Thickness=$(t);Length=$(l);Height=$(WALL_H);Magnets=$(WALL_MAGNETS),wall_$(t)x$(l)))))
 
@@ -499,24 +501,29 @@ $(foreach t,$(WALL_THICKNESSES),$(foreach l,$(WALL_LENGTHS),$(eval $(call part,w
 #    printed height as a plain wall. The ribbon drops across the opening: to a sill
 #    under a window (with the glass line engraved along it) and lower still to a
 #    threshold under a door, so the two read apart by touch as well as from above.
+#    Both are printed mm, and both are a share of WALL_H — about a third of the ribbon
+#    for a sill and a fifth for a threshold — so raising the wall raises them with it.
 #    A door then carries that threshold on into the room as the quarter circle the
 #    leaf sweeps (DOOR_SWING), so the piece occupies the floor the door needs and
-#    nothing can be planned into it. Sizes are the German standards — windows on the
+#    nothing can be planned into it — and that plate carries the opening width
+#    engraved on it, as a plain wall carries its length. Sizes are the German
+#    standards — windows on the
 #    1/8 m series they are sold in, doors the DIN 18101 masonry opening (Rohbaumass)
 #    for the 61/73.5/86/98.5/111 cm leaves. DOOR_HANDS is which end the hinge is on;
 #    turning a segment round in the plan gives the other two hands (see door.scad).
-OPENING_REVEAL   ?= 12.5
+OPENING_REVEAL   ?= 20
 WINDOW_WIDTHS    := 60 80 100 120 140 160 180
-WINDOW_SILL_H    ?= 2.5
+WINDOW_SILL_H    ?= 4.5
 DOOR_WIDTHS      := 62.5 75 87.5 100 112.5
 DOOR_HANDS       := left right
-DOOR_THRESHOLD_H ?= 1.5
+DOOR_THRESHOLD_H ?= 2.7
 # false = a plain opening, with the swing arc engraved in the threshold instead
 DOOR_SWING       ?= true
-# Magnet pockets per pier (0 = none). A pier is only 3.1 mm long at 1:40 — too small
-# for even the 2x1 disc, so no pocket is cut and every opening segment says so in the
-# render log; an opening is held by the run it butts into. Set this to 0 to stop
-# asking (see MAGNET_D_SMALL).
+# Magnet pockets per pier (0 = none). The pier is the only part of an opening segment
+# thick enough to sink a pocket into, so it is what sets OPENING_REVEAL above: a pocket
+# needs 4.3 mm of floor at 1:40, i.e. a pier of at least 17.2 cm, and 20 is the first
+# round number past it. Across the thickness the 11.5 cm partition still needs the pad
+# the thin walls get; the load-bearing ones take the 2x1 disc as they are.
 OPENING_MAGNETS  ?= 1
 $(foreach t,$(WALL_THICKNESSES),$(foreach w,$(WINDOW_WIDTHS),$(eval $(call part,walls,window,Thickness=$(t);Width=$(w);Reveal=$(OPENING_REVEAL);Height=$(WALL_H);Sill_h=$(WINDOW_SILL_H);Magnets=$(OPENING_MAGNETS),window_$(t)x$(w)))))
 $(foreach t,$(WALL_THICKNESSES),$(foreach w,$(DOOR_WIDTHS),$(foreach h,$(DOOR_HANDS),$(eval $(call part,walls,door,Thickness=$(t);Width=$(w);Reveal=$(OPENING_REVEAL);Height=$(WALL_H);Threshold_h=$(DOOR_THRESHOLD_H);Hand="$(h)";Swing_plate=$(DOOR_SWING);Magnets=$(OPENING_MAGNETS),door_$(t)x$(w)_$(h))))))
