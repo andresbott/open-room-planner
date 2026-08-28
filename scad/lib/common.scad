@@ -21,11 +21,13 @@ Resolution = 64;
 //   Height_scale  squashes every piece at once, for a shorter set that still
 //                 reads in the right order (0.75 = three quarters as tall).
 //   Height_min    the least a piece may print, whatever its real height says: a
-//                 magnet pocket (magnet_pocket_h()) plus material over it. Only
-//                 the floor-level pieces — a shower tray — reach it.
+//                 magnet pocket (magnet_pocket_h() — 2.2 mm for the standard disc)
+//                 plus 1.2 mm of material over it. Only the floor-level pieces — a
+//                 shower tray — reach it. Raise it with the disc if you fit a
+//                 deeper magnet than Magnet_h.
 // The Makefile mirrors both as HEIGHT_SCALE / HEIGHT_MIN.
 Height_scale = 1;
-Height_min   = 2.4;  // mm
+Height_min   = 3.4;  // mm
 
 // Engraved-label defaults (see label()).
 Label_size  = 3;    // printed cap height, mm
@@ -51,6 +53,50 @@ Cushion_rise   = 8;    // cm a pad stands above the face it sits on
 Cushion_taper  = 0.5;  // mm the top is pulled in, so the sides slope
 Cushion_radius = 1.2;  // mm corner rounding of a pad — softer than a carcass
 
+// Sunken hollows — a bath basin, a sink bowl, a hob burner (see hollow()). How wide
+// the flat floor of a hollow is, as a fraction of its rim: the walls slope out from it
+// on the way up, so nothing overhangs and the light gets in. 1 would give straight
+// sides, 0 a crater with a point at the bottom.
+Hollow_floor = 0.62;
+
+// Fitted units — a kitchen run, an island, a larder (see base_unit()/unit_fronts()).
+// The proportions live here rather than in each part, so every unit in the set shares
+// one plinth height and one worktop lip and a run of them lines up. Depths and heights
+// are real-world cm, like any other furniture dimension.
+Unit_top  = 4;   // cm of a unit's height the worktop slab takes ...
+Unit_lip  = 2;   // ... and how far that slab overhangs the carcass at the front
+Unit_kick = 6;   // cm the plinth is set back under the carcass — the toe kick ...
+Unit_foot = 10;  // ... and how tall the plinth is
+// Door and drawer fronts. A front is recessed into the face rather than left standing
+// proud of it: what the eye reads is the shadow gap between fronts, and cutting it
+// keeps the face flat — nothing to overhang on the printer, nothing to catch in the box.
+Front_gap    = 2;    // cm of shadow gap around every front
+Front_relief = 0.5;  // mm a front is recessed into the face
+// The grip: a slot along the top of a front, standing in for a handle. A real handle is
+// a 1 mm bar at 1:40 — a pimple that snaps off and catches on whatever the piece is
+// stored with, the same reason washbasin.scad leaves its tap off — so the token gets
+// the handleless grip rail instead, which is a cut and not a spike.
+Grip_h   = 3;    // cm of the top of a front its grip slot takes ...
+Grip_cut = 0.4;  // ... and mm it is cut deeper than the front around it
+// A control fascia (see unit_fascia()) — the slim band that gives an integrated machine
+// away above the counter line, and what a cooker's knobs sit on.
+Fascia_h = 5;    // cm of the top of a face the fascia takes
+
+// Pieces that stand on legs rather than on their whole footprint (see legged_block()):
+// a dining chair, a bench, a buffet, a glazed cabinet. Real cm — furniture, not ink.
+Leg_w   = 8;   // cm — a corner post, seen on both faces it turns ...
+Leg_set = 3;   // ... and how far the rail between two posts is set back behind them
+Leg_top = 4;   // cm of the height the top slab takes, standing proud all round
+
+// Open bays cut into a front face (see front_bays()) — a shelf unit, a glazed case, a
+// wardrobe frame. Real cm: what the shelves stand for is furniture.
+Bay_depth = 7;  // cm a bay is sunk into the face ...
+Bay_rib   = 2;  // ... and the shelf left standing at the face between two of them
+
+// A slab on open legs (see slab_on_legs()) — a table, a console. Real cm.
+Legs_inset = 2;   // cm the legs are set in from the edge, so the slab stands proud ...
+Legs_gap   = 20;  // ... and the clear span that has to be left between two of them
+
 // Corner rounding of a footprint, in printed mm (not scaled — it is a print
 // detail, not a real-world dimension).
 Corner_radius = 0.6;
@@ -59,17 +105,21 @@ Corner_radius = 0.6;
 // stay the same at any scale. The pocket opens at the BOTTOM face so the magnet
 // touches the steel directly (no plastic in the gap: a 0.4 mm layer over a small
 // disc costs half its pull) and needs no bridging — drop it in after printing.
-// Two discs cover the whole catalogue, both 1 mm high so every pocket is the same
-// depth: 4x1 (~90 g of pull) on anything wide enough for it, 2x1 (~20 g) on the
-// pieces that are not — at 1:40, the wall segments. magnets() picks between them per
-// piece (see magnet_d_for), so a part just asks for pockets and gets the biggest disc
-// that fits. A piece too thin for even the 2x1 — the 11.5 cm partition ribbon, at this
-// scale — is not left without one: it gets the material it needs instead, a low pad
-// under each pocket (see magnet_pads below). Keep every magnet the same way up so
-// neighbouring pieces repel gently instead of snapping together and skewing the layout.
+// Two discs cover the whole catalogue: 4x2 (~180 g of pull) on anything wide enough for
+// it, 2x1 (~20 g) on the pieces that are not — at 1:40, the wall segments. magnets()
+// picks between them per piece (see magnet_d_for), so a part just asks for pockets and
+// gets the biggest disc that fits. A piece too thin for even the 2x1 — the 11.5 cm
+// partition ribbon, at this scale — is not left without one: it gets the material it
+// needs instead, a low pad under each pocket (see magnet_pads below).
+// The two are NOT the same height, so a pocket's depth follows its diameter
+// (magnet_h_for): 2.2 mm deep under a piece of furniture, 1.2 under a wall. That is why
+// Height_min is what it is — the shallowest piece still has to bury a 2 mm disc.
+// Keep every magnet the same way up so neighbouring pieces repel gently instead of
+// snapping together and skewing the layout.
 Magnet_d       = 4;    // magnet diameter — the standard disc
 Magnet_d_small = 2;    // ... and the one for pieces too narrow for it
-Magnet_h       = 1;    // magnet height (both sizes)
+Magnet_h       = 2;    // how tall the standard disc is
+Magnet_h_small = 1;    // ... and the small one
 // Printer allowance. An FDM hole prints undersize, so the pocket is cut wider and
 // deeper than the disc: it drops in by hand (a spot of CA glue holds it) and can
 // never stand proud of the bottom face and rock the piece. The 0.2 mm of extra
@@ -171,6 +221,47 @@ module cushion(w_cm, d_cm, base_z, h_cm = Cushion_rise, taper = Cushion_taper,
             linear_extrude(height = 0.01)
                 offset(delta = -taper) footprint_2d(w_cm, d_cm, r);
     }
+}
+
+// A reclined backrest along the back (+Y) edge — the leaning relative of cushion(),
+// for the one pad that must not stand straight. Its wall (+Y) side stays flush, so a
+// piece still butts a wall, while its seat-facing (-Y) face slopes back on the way up,
+// the way you lean into a sofa. It hulls a <d_cm>-deep base to a shallower top set back
+// by <recline_cm> real cm: the top's back edge stays over the base's, so every layer
+// steps BACK, never out, and it prints upright with nothing to support. <w_cm> wide,
+// centred in x on the origin; its back edge sits <rear_cm> real cm from the origin in
+// +Y and it rises <h_cm> real cm above <base_z> printed mm. The top keeps at least
+// <min_frac> of the base depth, so a deep recline cannot pinch it to nothing — it
+// clamps and says so. Add it to the solid like cushion():
+//   translate([cm(x), 0, 0]) backrest(50, 22, seat_z, 45, 40, 12);
+module backrest(w_cm, d_cm, base_z, rear_cm, h_cm, recline_cm,
+                taper = Cushion_taper, r = Cushion_radius, min_frac = 0.4) {
+    h     = rise(h_cm);
+    top_d = max(d_cm * min_frac, d_cm - recline_cm);
+    if (d_cm - recline_cm < d_cm * min_frac)
+        echo(str("NOTE: a ", recline_cm, " cm recline over a ", d_cm,
+                 " cm backrest would pinch its top away — leaned it to ",
+                 d_cm - top_d, " cm instead (give it a deeper back: Back_d)"));
+    hull() {
+        translate([0, cm(rear_cm - d_cm / 2), base_z - 0.01])
+            linear_extrude(height = 0.01) footprint_2d(w_cm, d_cm, r);
+        translate([0, cm(rear_cm - top_d / 2), base_z + h])
+            linear_extrude(height = 0.01)
+                offset(delta = -taper) footprint_2d(w_cm, top_d, r);
+    }
+}
+
+// A throw pillow — a chunky square cushion turned 45 deg so it reads as a diamond from
+// above, the way one is tossed into the corner of a sofa (the white ones in a catalogue
+// photo). It is a cushion() with near-vertical sides and softened corners: standing tall
+// on almost-vertical walls it reads unambiguously as RAISED (a shallow dome, viewed from
+// above, flips to a crater under the render light), and a cushion prints straight up with
+// nothing to support. <s_cm> is its side in real cm, centred on the origin; make it tall
+// (h_cm ~ half its side) so it comes out a plump lump rather than a flat tile, and give
+// two of them room not to merge. Translate it onto the seat and add it to the solid.
+module pillow(s_cm, base_z, h_cm = Cushion_rise, taper = Cushion_taper,
+              r = Cushion_radius * 1.5) {
+    rotate([0, 0, 45]) cushion(s_cm, s_cm, base_z, h_cm, taper, r);
 }
 
 // Text cut into the top face of a piece. Subtract it from the solid:
@@ -353,10 +444,15 @@ function magnet_pad_h(h = Magnet_h, fit_h = Magnet_fit_h, cover = Magnet_pad_cov
 
 // The disc a <w_cm> x <d_cm> footprint actually gets: the one asked for where the
 // piece is wide enough, else the small one. This is what makes a wardrobe take a
-// 4x1 and a partition wall a 2x1 from the same magnets() call.
+// 4x2 and a partition wall a 2x1 from the same magnets() call.
 function magnet_d_for(w_cm, d_cm, d = Magnet_d, small = Magnet_d_small,
                       fit = Magnet_fit, inset = Magnet_inset) =
     min(cm(w_cm), cm(d_cm)) >= magnet_min_span(d, fit, inset) ? d : small;
+
+// ... and how tall that disc is, so the pocket is cut as deep as the magnet that goes
+// in it and no deeper. The pair to magnet_d_for(): feed it what that returned.
+function magnet_h_for(dia, d = Magnet_d, h = Magnet_h, h_small = Magnet_h_small) =
+    dia >= d ? h : h_small;
 
 // True when <w_cm> x <d_cm> is too thin across its SHORT axis to hold the pocket it
 // would get, so the only way it can carry one is on a pad (see magnet_pads).
@@ -415,28 +511,31 @@ module magnet_pocket(x = 0, y = 0, d = Magnet_d, h = Magnet_h, fit = Magnet_fit,
 //   difference() { footprint(160, 200, 6); magnets(160, 200, 2); }
 // The disc is the biggest of the two that fits (magnet_d_for) and the count is
 // clamped to what fits, so the same call is safe on any piece at any scale. A piece
-// that drops to the small disc says so, because it changes which magnet you drop in.
+// that drops to the small disc says so, because it changes which magnet you drop in —
+// and the two are different heights, so the pocket is cut to the one the piece got
+// (magnet_h_for), never to the standard depth regardless.
 // <pad> is for a piece too thin to hold a pocket on its own — a wall ribbon: it cuts
 // the row anyway, and the part unions magnet_pads() with the same arguments into its
 // solid to carry it. Without it such a piece is left solid, with a warning.
 module magnets(w_cm, d_cm, n = 1, d = Magnet_d, h = Magnet_h, fit = Magnet_fit,
                inset = Magnet_inset, gap = Magnet_gap, spread = Magnet_spread,
-               pad = false) {
+               pad = false, h_small = Magnet_h_small) {
     dia   = magnet_d_for(w_cm, d_cm, d, Magnet_d_small, fit, inset);
+    dh    = magnet_h_for(dia, d, h, h_small);
     count = magnet_count(w_cm, d_cm, n, d, fit, inset, gap, pad);
     padded = pad && magnet_pad_needed(w_cm, d_cm, d, fit, inset);
     if (count < n)
         echo(str("WARNING: ", w_cm, "x", d_cm, " cm at 1:", Scale, " fits ",
-                 count, " of ", n, " ", dia, "x", h, " mm magnets"));
+                 count, " of ", n, " ", dia, "x", dh, " mm magnets"));
     else if (padded)
         echo(str("NOTE: ", w_cm, "x", d_cm, " cm at 1:", Scale,
-                 " is too thin to hold a pocket — cut for ", count, " ", dia, "x", h,
+                 " is too thin to hold a pocket — cut for ", count, " ", dia, "x", dh,
                  " mm on a ", magnet_pad_d(dia, fit, inset), " mm pad"));
     else if (dia != d)
         echo(str("NOTE: ", w_cm, "x", d_cm, " cm at 1:", Scale, " is too narrow for a ",
-                 d, " mm disc — cut for ", count, " ", dia, "x", h, " mm"));
+                 d, " mm disc — cut for ", count, " ", dia, "x", dh, " mm"));
     for (p = magnet_row(w_cm, d_cm, n, d, fit, inset, gap, spread, pad))
-        magnet_pocket(p[0], p[1], dia, h, fit);
+        magnet_pocket(p[0], p[1], dia, dh, fit);
 }
 
 // The material a piece too thin for a pocket needs, under every pocket magnets(pad =
@@ -453,11 +552,14 @@ module magnets(w_cm, d_cm, n = 1, d = Magnet_d, h = Magnet_h, fit = Magnet_fit,
 module magnet_pads(w_cm, d_cm, n = 1, d = Magnet_d, h = Magnet_h, fit = Magnet_fit,
                    inset = Magnet_inset, gap = Magnet_gap, spread = Magnet_spread,
                    fit_h = Magnet_fit_h, cover = Magnet_pad_cover,
-                   chamfer = Magnet_pad_chamfer) {
+                   chamfer = Magnet_pad_chamfer, h_small = Magnet_h_small) {
     if (magnet_pad_needed(w_cm, d_cm, d, fit, inset)) {
         dia = magnet_d_for(w_cm, d_cm, d, Magnet_d_small, fit, inset);
+        // as tall as the pocket it carries, which is the disc the piece got — a pad is
+        // only ever under a small one, so it stays the low foot it was
+        dh  = magnet_h_for(dia, d, h, h_small);
         for (p = magnet_row(w_cm, d_cm, n, d, fit, inset, gap, spread, true))
-            magnet_pad(p[0], p[1], dia, h, fit, inset, fit_h, cover, chamfer);
+            magnet_pad(p[0], p[1], dia, dh, fit, inset, fit_h, cover, chamfer);
     }
 }
 
@@ -510,6 +612,14 @@ module front_recess(x, z, w, h, depth_cm, cut = Label_depth) {
         cube([w, cut + 0.1, h], center = true);
 }
 
+// The same recess in the BACK (+Y) face, for a panel that is seen from both sides — a
+// chair back, a room divider. Recess both faces of a thin upright and the web left
+// between them still prints solid, with nothing to bridge: what reads from either side
+// is a frame round a sunken field, which is what a chair back is.
+module back_recess(x, z, w, h, depth_cm, cut = Label_depth) {
+    mirror([0, 1, 0]) front_recess(x, z, w, h, depth_cm, cut);
+}
+
 // One front-loader's face, cut into the front (-Y) face of a footprint() box <w_cm>
 // wide and <depth_cm> deep: a slim control fascia near the top of the unit's band, a
 // porthole door filling the space below it, and — with <drawer> — a detergent drawer
@@ -534,4 +644,475 @@ module appliance_front(w_cm, depth_cm, z0, z1, drawer = false,
     door_top = fascia_z - f_h / 2 - rise(gap);                   // the porthole door,
     door_d   = min(door_frac * face_w, (door_top - z0) - 2 * Symbol_margin); // centred
     porthole(door_d, (z0 + door_top) / 2, depth_cm);            // in the space below
+}
+
+// ---- sunken hollows ---------------------------------------------------------
+
+// A hollow sunk <depth> mm into a top face at <top_z>: the 2D outline given as its
+// child at the face, narrowing to a smaller copy of it <depth> below — so the walls
+// slope out on the way up, nothing overhangs the printer, the light gets into the
+// hollow instead of leaving a dark slot, and a drain has a flat floor to sit on. A
+// bath basin, a sink bowl and a hob burner are all this one shape at three sizes.
+// Subtract it from the solid:
+//   difference() { footprint(80, 60, h); hollow(h, 4.5) footprint_2d(50, 34, 1); }
+// <floor> is the flat floor as a fraction of the rim, so the child has to be centred
+// on the origin — translate the whole call to move a hollow, never the child.
+module hollow(top_z, depth, floor = Hollow_floor) {
+    if (depth > 0)
+        hull() {
+            translate([0, 0, top_z - depth])
+                linear_extrude(height = 0.01) scale(floor) children();
+            translate([0, 0, top_z])
+                linear_extrude(height = 0.01) children();
+        }
+}
+
+// ---- fitted units -----------------------------------------------------------
+// A fitted unit is not a brick, and printing it as one is what makes a kitchen the
+// flattest room on the plan. What you see standing in front of one is a worktop slab
+// overhanging a carcass, the carcass standing on a plinth set back further still, and
+// a grid of door and drawer fronts on the face between the two. base_unit() builds
+// that body, unit_fronts() draws the fronts on it and unit_fascia() the control band
+// of a machine built into the run — the same idea as appliance_front() above: the
+// piece is read from a low angle, so the detail goes where a low angle can see it.
+//
+// In section, across a base unit (its front, -Y, on the left):
+//
+//     |‾‾‾‾‾‾‾‾‾‾|     the worktop slab, at the full footprint ...
+//    /           |     ... a 45 deg flare down to ...
+//    |           |     ... the carcass, set back Unit_lip: the face the fronts are
+//    |           |         cut into ...
+//     \          |     ... another flare down to ...
+//     |          |     ... the plinth, set back Unit_kick — the toe kick, in shadow
+//    ----------------       at the floor
+//
+// Every step outwards on the way up is a 45 deg flare, so a unit prints the right way
+// up with nothing to support and nothing to bridge, and the magnet pocket still opens
+// at the floor — in the plinth, which is the face that really touches the board, so
+// that is the footprint to hand magnets() (see unit_plinth_d()).
+//
+// A flare is as TALL as the step it covers is deep, in printed mm: 45 deg is a fact
+// about the printer, not a real-world dimension, so the flares are the one height in
+// the set that Height_scale leaves alone.
+//
+// <top_cm> is how much of the height the worktop slab takes. Pass 0 for a piece with
+// no worktop of its own, whose fronts run the full height instead — a larder, a
+// fridge, an integrated dishwasher under someone else's counter; everything here
+// takes it, so a part passes the same value throughout.
+
+// The plinth's set-back and the slab's overhang, in real cm: what Unit_kick and
+// Unit_lip ask for, clamped so neither can eat a shallow piece (a 30 cm wall unit
+// keeps a carcass) and so the overhang never reaches past the set-back under it.
+function unit_back(w_cm, d_cm) = min(Unit_kick, min(w_cm, d_cm) / 4);
+function unit_over(w_cm, d_cm, top_cm = Unit_top) =
+    top_cm > 0 ? min(Unit_lip, unit_back(w_cm, d_cm)) : 0;
+// What is left of a <h> mm-tall unit once the two flares have had their share — which
+// together always come to cm(unit_back()), however the step is split between them.
+function unit_room(w_cm, d_cm, h) = max(0, h - cm(unit_back(w_cm, d_cm)));
+// The slab and the plinth, printed mm: their real heights, but never more than a third
+// of that room each — so a piece too short for the whole stack still comes out solid,
+// with a carcass left between the two, instead of inside out.
+function unit_slab(w_cm, d_cm, h, top_cm = Unit_top) =
+    min(rise(top_cm), unit_room(w_cm, d_cm, h) / 3);
+function unit_foot(w_cm, d_cm, h) =
+    min(rise(Unit_foot), unit_room(w_cm, d_cm, h) / 3);
+// The band of carcass face the fronts go in, printed mm up from the floor: from the
+// top of the toe-kick flare to the underside of the slab's.
+function unit_face_z0(w_cm, d_cm, h, top_cm = Unit_top) =
+    unit_foot(w_cm, d_cm, h) + cm(unit_back(w_cm, d_cm) - unit_over(w_cm, d_cm, top_cm));
+function unit_face_z1(w_cm, d_cm, h, top_cm = Unit_top) =
+    h - unit_slab(w_cm, d_cm, h, top_cm) - cm(unit_over(w_cm, d_cm, top_cm));
+// The depth to hand front_recess() so its cut lands on the CARCASS face and not out
+// where the footprint's front edge is: the piece less the set-back at each end of it.
+function unit_face_d(w_cm, d_cm, top_cm = Unit_top) =
+    d_cm - 2 * unit_over(w_cm, d_cm, top_cm);
+// The footprint a unit actually stands on — its plinth, set back at the front, or all
+// round on an island. Hand it to magnets(), so the disc is chosen and the pockets are
+// placed on the face that really meets the board.
+function unit_plinth_d(w_cm, d_cm)   = d_cm - unit_back(w_cm, d_cm);
+function island_plinth_w(w_cm, d_cm) = w_cm - 2 * unit_back(w_cm, d_cm);
+function island_plinth_d(w_cm, d_cm) = d_cm - 2 * unit_back(w_cm, d_cm);
+
+// A footprint outline with its FRONT (-Y) edge set back <set_cm> real cm and its back
+// edge left where it was — a carcass under a worktop's overhang, a plinth under a
+// carcass. The rounding is clamped to what is left, so a deep set-back cannot round
+// a shallow outline away to nothing.
+module footprint_front_2d(w_cm, d_cm, set_cm, r = Corner_radius) {
+    d = max(0.1, d_cm - set_cm);
+    translate([0, cm(set_cm) / 2])
+        footprint_2d(w_cm, d, min(r, max(0, min(cm(w_cm), cm(d)) / 2 - 0.05)));
+}
+
+// ... and one pulled in <in_cm> all round, for a piece stepped on every side. offset()
+// keeps the corners round, so there is nothing to re-round.
+module footprint_inset_2d(w_cm, d_cm, in_cm, r = Corner_radius) {
+    offset(delta = -cm(in_cm)) footprint_2d(w_cm, d_cm, r);
+}
+
+// A 45 deg blend from one outline to the next, <h> mm tall: the hull between its first
+// child at the bottom and its second at the top. <h> is not free — it is the
+// horizontal step between the two outlines, which is what makes the blend 45 deg.
+module flare(h) {
+    hull() {
+        linear_extrude(height = 0.01) children(0);
+        translate([0, 0, h]) linear_extrude(height = 0.01) children(1);
+    }
+}
+
+// A base unit's body: <w_cm> x <d_cm> at the full footprint, <h> printed mm tall, as
+// the slab / carcass / plinth stack drawn above — for a unit that stands against a
+// wall, so only its front is stepped and its back stays flush for the next one to butt
+// against. See island_unit() for one that stands out in the room.
+module base_unit(w_cm, d_cm, h, top_cm = Unit_top, r = Corner_radius) {
+    back = unit_back(w_cm, d_cm);
+    over = unit_over(w_cm, d_cm, top_cm);
+    foot = unit_foot(w_cm, d_cm, h);
+    slab = unit_slab(w_cm, d_cm, h, top_cm);
+    z0   = unit_face_z0(w_cm, d_cm, h, top_cm);   // the carcass face, bottom ...
+    z1   = unit_face_z1(w_cm, d_cm, h, top_cm);   // ... and top
+    union() {
+        linear_extrude(height = foot + 0.01)             // the plinth
+            footprint_front_2d(w_cm, d_cm, back, r);
+        if (back > over)                                 // out to the carcass
+            translate([0, 0, foot])
+                flare(cm(back - over)) {
+                    footprint_front_2d(w_cm, d_cm, back, r);
+                    footprint_front_2d(w_cm, d_cm, over, r);
+                }
+        translate([0, 0, z0])                            // the carcass
+            linear_extrude(height = max(0.01, z1 - z0))
+                footprint_front_2d(w_cm, d_cm, over, r);
+        if (over > 0)                                    // out to the slab
+            translate([0, 0, z1])
+                flare(cm(over)) {
+                    footprint_front_2d(w_cm, d_cm, over, r);
+                    footprint_2d(w_cm, d_cm, r);
+                }
+        if (slab > 0)                                    // the worktop slab
+            translate([0, 0, h - slab])
+                linear_extrude(height = slab) footprint_2d(w_cm, d_cm, r);
+    }
+}
+
+// An island's body: the same stack, stepped on ALL FOUR sides — an island stands in
+// the room, so its slab overhangs and its plinth is set back everywhere, not just at
+// the front. The fronts still go on the front (-Y) face, the side it is read from.
+module island_unit(w_cm, d_cm, h, top_cm = Unit_top, r = Corner_radius) {
+    back = unit_back(w_cm, d_cm);
+    over = unit_over(w_cm, d_cm, top_cm);
+    foot = unit_foot(w_cm, d_cm, h);
+    slab = unit_slab(w_cm, d_cm, h, top_cm);
+    z0   = unit_face_z0(w_cm, d_cm, h, top_cm);
+    z1   = unit_face_z1(w_cm, d_cm, h, top_cm);
+    union() {
+        linear_extrude(height = foot + 0.01)
+            footprint_inset_2d(w_cm, d_cm, back, r);
+        if (back > over)
+            translate([0, 0, foot])
+                flare(cm(back - over)) {
+                    footprint_inset_2d(w_cm, d_cm, back, r);
+                    footprint_inset_2d(w_cm, d_cm, over, r);
+                }
+        translate([0, 0, z0])
+            linear_extrude(height = max(0.01, z1 - z0))
+                footprint_inset_2d(w_cm, d_cm, over, r);
+        if (over > 0)
+            translate([0, 0, z1])
+                flare(cm(over)) {
+                    footprint_inset_2d(w_cm, d_cm, over, r);
+                    footprint_2d(w_cm, d_cm, r);
+                }
+        if (slab > 0)
+            translate([0, 0, h - slab])
+                linear_extrude(height = slab) footprint_2d(w_cm, d_cm, r);
+    }
+}
+
+// A grid of door / drawer fronts cut into the front (-Y) face of a unit: <cols> across
+// its width by <rows> up the band between <z0> and <z1> printed mm, each front
+// recessed <relief> mm inside a shadow gap, with a grip slot along its top. The cut
+// lands on the carcass face, wherever the body set that back — hand it the same
+// <top_cm>. An uneven split is two calls at two bands (a fridge door over a freezer
+// one), the way appliance_front() stacks a washer and a dryer. Subtract it.
+//
+// <face_cm> overrides which plane the cut lands on, for a body that is not the fitted
+// unit stack: pass the depth the recessed face belongs to and <top_cm> is ignored (a
+// legged_block()'s rail face is Depth - 2 * its set-back). Pass <w_cm> as the width the
+// grid has to fill, which on a legged body is the field between the two posts, not the
+// whole piece — the grid is centred, so it lands in the field either way.
+//
+// <knob_cm> puts a round knob of that real diameter on each front INSTEAD of the grip
+// slot — <knob_n> of them, spread across the front. A fitted kitchen is handleless and
+// reads by its grip rail; a chest of drawers or a bedside table has knobs, and that is
+// most of what tells the two apart at 1:40. A knob is a dimple and not a bud, for the
+// reason Grip_h gives: a 1 mm spike snaps off in the box.
+module unit_fronts(w_cm, d_cm, z0, z1, cols = 1, rows = 1, top_cm = Unit_top,
+                   gap_cm = Front_gap, relief = Front_relief, grip = true,
+                   face_cm = 0, knob_cm = 0, knob_n = 1) {
+    face_d = face_cm > 0 ? face_cm : unit_face_d(w_cm, d_cm, top_cm);
+    gap    = cm(gap_cm);
+    cell_w = cm(w_cm) / cols;
+    cell_h = (z1 - z0) / rows;
+    fw     = cell_w - gap;                    // one front ...
+    fh     = cell_h - gap;
+    gh     = min(rise(Grip_h), fh / 3);       // ... and the grip slot along its top
+    if (fw < Symbol_stroke || fh < Symbol_stroke)
+        echo(str("WARNING: ", w_cm, "x", d_cm, " cm at 1:", Scale, " has no room for ",
+                 cols, "x", rows, " fronts on its face"));
+    else
+        for (i = [0 : cols - 1], j = [0 : rows - 1]) {
+            x = -cm(w_cm) / 2 + cell_w * (i + 0.5);
+            z = z0 + cell_h * (j + 0.5);
+            front_recess(x, z, fw, fh, face_d, relief);
+            if (knob_cm > 0)
+                front_knobs(x, z, fw, fh, face_d, knob_cm, knob_n, relief);
+            else if (grip && gh >= Symbol_stroke)
+                front_recess(x, z + fh / 2 - gh / 2, fw, gh, face_d, relief + Grip_cut);
+        }
+}
+
+// <n> round knob dimples on one front — a <w> x <h> printed-mm panel centred at <x>,<z>
+// on the face of a piece <depth_cm> deep, already recessed <relief> into it. The knob is
+// as wide as asked for, or as wide as the front can carry with material round it; one is
+// centred and a pair sits on the quarter points. Cut, like everything else on a face.
+module front_knobs(x, z, w, h, depth_cm, knob_cm, n = 1, relief = Front_relief,
+                   cut = Grip_cut) {
+    d = min(cm(knob_cm), w / 3, h / 2);
+    if (d >= Symbol_stroke)
+        for (i = [0 : n - 1])
+            translate([x + (n == 1 ? 0 : (i - (n - 1) / 2) * w / 2),
+                       -cm(depth_cm) / 2 - 0.1, z])
+                rotate([-90, 0, 0])
+                    cylinder(h = relief + cut + 0.1, d = d);
+}
+
+// A grid of open bays cut into the front (-Y) face: <rows> of them up the band between <z0>
+// and <z1> printed mm, <cols> across, each sunk <depth_cm> into the face, with the shelf left
+// standing at the face as a rib between every pair and a mullion between columns. An open
+// shelf unit, a glazed case and a wardrobe frame's hanging space are all this one cut, and it
+// is what makes them read as open instead of as a block with lines drawn on it. Subtract it.
+//
+// The bays come out EQUAL. A piece whose bays are not — a wardrobe frame, with a tall hanging
+// space under a rail and a shelf over it — cuts them one at a time instead (see
+// bedroom/ikea_pax.scad).
+//
+// A rib is a ledge as deep as the bay it divides, so it prints as a short unsupported
+// overhang: keep <depth_cm> to a couple of mm at the plan scale and it comes out clean. Cut a
+// bay right THROUGH to a back panel and the ribs become bridges instead, which is why the one
+// part that does that prints on its back (livingroom/bookshelf.scad).
+//
+// <face_cm> is the depth whose front face the cut lands on, as in unit_fronts() — pass a
+// legged or set-back body's face depth, or leave it 0 for the piece's own front.
+module front_bays(w_cm, d_cm, z0, z1, rows = 1, cols = 1, depth_cm = Bay_depth,
+                  rib_cm = Bay_rib, mullion_cm = 0, face_cm = 0) {
+    face  = face_cm > 0 ? face_cm : d_cm;
+    rib   = cm(rib_cm);
+    mull  = cm(mullion_cm > 0 ? mullion_cm : rib_cm);
+    bay_h = (z1 - z0 - (rows - 1) * rib) / rows;
+    bay_w = (cm(w_cm) - (cols - 1) * mull) / cols;
+    if (bay_w < Symbol_stroke || bay_h < Symbol_stroke)
+        echo(str("WARNING: ", w_cm, " cm at 1:", Scale, " leaves ", bay_w, " x ", bay_h,
+                 " mm per bay over ", cols, "x", rows, " — too thin, bays skipped"));
+    else
+        for (i = [0 : cols - 1], j = [0 : rows - 1])
+            front_recess(-cm(w_cm) / 2 + bay_w / 2 + i * (bay_w + mull),
+                         z0 + bay_h / 2 + j * (bay_h + rib),
+                         bay_w, bay_h, face, cm(depth_cm));
+}
+
+// A control fascia across the front (-Y) face: a strip <h_cm> real cm tall whose TOP
+// edge sits at <z> printed mm, kept a shadow gap in from the sides. What is left for a
+// fronts grid under it is z0 .. z - rise(h_cm).
+module unit_fascia(w_cm, d_cm, z, h_cm = Fascia_h, top_cm = Unit_top,
+                   gap_cm = Front_gap, relief = Front_relief) {
+    h = rise(h_cm);
+    front_recess(0, z - h / 2, cm(w_cm) - 2 * cm(gap_cm), h,
+                 unit_face_d(w_cm, d_cm, top_cm), relief);
+}
+
+// ---- a slab on open legs ----------------------------------------------------
+// A table is read by the AIR under its top, and that is the one thing a solid token cannot
+// fake: printed upright the slab would have to bridge between the legs. So the handful of
+// pieces whose openness is the point — a dining table, a garden table, a hall console — are
+// modelled as a slab with legs standing under it and PRINTED FACE DOWN, top face on the bed.
+// Upside down the piece only ever rises from its widest face, so nothing overhangs, nothing
+// bridges, and the magnet pockets open upwards for the discs to drop into. The model itself
+// stays the right way up like every other part (pockets at z = 0); flip it in the slicer.
+//
+// Everything else is better off solid and read by its frame — see legged_block() below.
+//
+// A leg has to be wide enough to bury a magnet (magnet_span_cm(), 25 cm of real furniture at
+// 1:40), which on a small top is most of what decides how it looks: slab_leg() clamps to that
+// first and slab_leg_gap() reports what clear span is left, so a part can warn when the legs
+// have crowded out the air they were there to show.
+
+// The narrowest a foot may be, in real cm, and still bury a <d> disc — with a hair of slack so
+// rounding cannot tip it under and drop the piece to the small disc.
+function magnet_span_cm(d = Magnet_d) = plan_cm(magnet_min_span(d) + 0.1);
+
+// A leg's real width: what was asked for, never narrower than <min_cm> (what a pocket in its
+// foot needs), never so wide that the clear span between two closes below <gap_cm>, and never
+// past the middle of the piece however the numbers are set.
+function slab_leg(w_cm, d_cm, want_cm, min_cm = 0, inset_cm = Legs_inset,
+                  gap_cm = Legs_gap) =
+    min(min(w_cm, d_cm) / 2 - inset_cm,
+        max(min_cm, min(want_cm, (min(w_cm, d_cm) - 2 * inset_cm - gap_cm) / 2)));
+// The clear span left between two legs on the tighter side, real cm. A magnet's own minimum
+// wins over <gap_cm>, so on a small top this comes out under it — worth saying so.
+function slab_leg_gap(w_cm, d_cm, leg_cm, inset_cm = Legs_inset) =
+    min(w_cm, d_cm) - 2 * inset_cm - 2 * leg_cm;
+// Where a leg's centre sits along one axis, real cm from the centre of the piece.
+function slab_leg_x(w_cm, leg_cm, inset_cm = Legs_inset) =
+    w_cm / 2 - inset_cm - leg_cm / 2;
+
+// Where the legs go, as a 2D union: at the four corners, or — with <round> — at 45 deg round
+// the rim of a round top, which is where a round table's legs are.
+module slab_legs_2d(w_cm, d_cm, leg_cm, round = false, inset_cm = Legs_inset) {
+    r = max(0, min(Corner_radius, cm(leg_cm) / 2 - 0.05));
+    union() {
+        if (round)
+            for (a = [45 : 90 : 315])
+                translate((cm(w_cm) / 2 - cm(inset_cm) - cm(leg_cm) / 2)
+                              * [cos(a), sin(a)])
+                    circle(d = cm(leg_cm));
+        else
+            for (sx = [-1, 1], sy = [-1, 1])
+                translate([sx * cm(slab_leg_x(w_cm, leg_cm, inset_cm)),
+                           sy * cm(slab_leg_x(d_cm, leg_cm, inset_cm))])
+                    footprint_2d(leg_cm, leg_cm, r);
+    }
+}
+
+// The body: the slab at the full footprint — its outline given as the child, so a round top
+// and a rectangular one come out of the same call — with a leg standing under each corner.
+// The legs are clipped to that outline, so a leg on a rounded corner or a round rim keeps the
+// curve instead of poking out through it.
+module slab_on_legs(w_cm, d_cm, h, leg_cm, top_cm, round = false,
+                    inset_cm = Legs_inset) {
+    slab = min(rise(top_cm), h / 2);
+    union() {
+        // clipped in 2D and extruded once — intersecting a 3D body with a 2D outline is not
+        // a thing OpenSCAD does, and doing it flat is cheaper anyway
+        linear_extrude(height = h - slab + 0.01)
+            intersection() {
+                children(0);
+                slab_legs_2d(w_cm, d_cm, leg_cm, round, inset_cm);
+            }
+        translate([0, 0, h - slab]) linear_extrude(height = slab) children(0);
+    }
+}
+
+// One pocket per foot, in diagonal order, so the two a table normally gets sit corner to
+// opposite corner and cannot let the piece pivot on the board. The shared magnets() rows along
+// one axis of a single rectangle and would lay that row out over the space between the legs —
+// air — so each foot gets its own call on its own footprint, as office/desk.scad does.
+module slab_leg_pockets(w_cm, d_cm, leg_cm, n = 1, round = false,
+                        inset_cm = Legs_inset) {
+    count = min(n, 4);
+    order = [[-1, -1], [1, 1], [-1, 1], [1, -1]];
+    angle = [45, 225, 135, 315];
+    if (n > count)
+        echo(str("WARNING: a slab on legs has four feet — ", n,
+                 " pockets asked for, ", count, " cut"));
+    for (i = [0 : count - 1])
+        if (round)
+            translate((cm(w_cm) / 2 - cm(inset_cm) - cm(leg_cm) / 2)
+                          * [cos(angle[i]), sin(angle[i])])
+                magnets(leg_cm, leg_cm, 1);
+        else
+            translate([order[i][0] * cm(slab_leg_x(w_cm, leg_cm, inset_cm)),
+                       order[i][1] * cm(slab_leg_x(d_cm, leg_cm, inset_cm))])
+                magnets(leg_cm, leg_cm, 1);
+}
+
+// ---- legs -------------------------------------------------------------------
+// A piece of furniture that is not fitted stands on legs, and a token that ignores that
+// is a brick: a chair, a bench, a buffet, a glazed cabinet all read by the frame you see
+// at their corners. legged_block() gives them one without giving up a solid print — the
+// four corners stay at the full footprint as posts, the rail between each pair is set
+// back behind them, and the top closes over the lot as a slab standing proud all round.
+// From any side you read two legs with a rail between them; underneath it is still one
+// broad face for a magnet pocket, and every layer is either straight up or a 45 deg
+// flare, so it prints the right way up with nothing to support.
+//
+// In section, across a legged block:
+//
+//     |‾‾‾‾‾‾‾‾‾‾‾‾|      the top slab, at the full footprint ...
+//    /              \     ... a 45 deg flare down to ...
+//    |  |‾‾‾‾‾‾‾‾|  |     ... the rail, set back Leg_set behind ...
+//    |  |        |  |     ... the corner posts, Leg_w wide, which are the only
+//    |__|        |__|         part of the body at the full footprint
+//
+// This is frame-and-panel, not an open-legged table: at 1:40 real air between four legs
+// means the top has to bridge between them, and the two parts of the set that want
+// genuine air under a slab print UPSIDE DOWN instead (diningroom/table.scad,
+// office/desk.scad). Everything else is better off solid and read by its frame.
+//
+// Fronts go on the rail face, so hand unit_fronts() the field between the posts and
+// legged_face_d() — see diningroom/sideboard.scad.
+
+// The set-back and the post, in real cm: what Leg_set / Leg_w ask for, clamped so a
+// shallow piece keeps a rail, a post can never be so fat that the two on one side meet,
+// and a post always stands at least as proud as the rail is set back.
+function legged_set(w_cm, d_cm, set_cm = Leg_set) =
+    min(set_cm, min(w_cm, d_cm) / 6);
+function legged_leg(w_cm, d_cm, leg_cm = Leg_w, set_cm = Leg_set) =
+    max(legged_set(w_cm, d_cm, set_cm), min(leg_cm, min(w_cm, d_cm) / 3));
+// The top of the rail face, printed mm up from the floor: under the slab and under the
+// flare that spreads out to it. The bottom of it is the floor — the posts run the whole
+// way down, so a part puts its own bottom rail in by starting its fronts above it.
+function legged_face_z1(w_cm, d_cm, h, top_cm = Leg_top, set_cm = Leg_set) =
+    max(0, h - min(rise(top_cm), h / 2) - cm(legged_set(w_cm, d_cm, set_cm)));
+// The depth to hand front_recess()/unit_fronts() so the cut lands on the RAIL face and
+// not out where the posts are, and the field of rail left between the two posts.
+function legged_face_d(w_cm, d_cm, set_cm = Leg_set) =
+    d_cm - 2 * legged_set(w_cm, d_cm, set_cm);
+function legged_field_w(w_cm, d_cm, leg_cm = Leg_w, set_cm = Leg_set) =
+    w_cm - 2 * legged_leg(w_cm, d_cm, leg_cm, set_cm);
+// The footprint the piece really stands on: the rail's, which is the broad part of the
+// bottom face — hand it to magnets(), as a fitted unit hands over its plinth's.
+function legged_floor_w(w_cm, d_cm, set_cm = Leg_set) =
+    w_cm - 2 * legged_set(w_cm, d_cm, set_cm);
+function legged_floor_d(w_cm, d_cm, set_cm = Leg_set) =
+    d_cm - 2 * legged_set(w_cm, d_cm, set_cm);
+
+// The body's outline below the slab: the rail, set back all round, plus a post at each
+// corner back out at the full footprint. The posts are clipped to the footprint, so they
+// keep its rounded corners instead of squaring them off.
+module legged_2d(w_cm, d_cm, leg_cm = Leg_w, set_cm = Leg_set, r = Corner_radius) {
+    leg = legged_leg(w_cm, d_cm, leg_cm, set_cm);
+    union() {
+        footprint_inset_2d(w_cm, d_cm, legged_set(w_cm, d_cm, set_cm), r);
+        intersection() {
+            footprint_2d(w_cm, d_cm, r);
+            union() {
+                for (sx = [-1, 1], sy = [-1, 1])
+                    translate([sx * (cm(w_cm) - cm(leg)) / 2,
+                               sy * (cm(d_cm) - cm(leg)) / 2])
+                        square([cm(leg), cm(leg)], center = true);
+            }
+        }
+    }
+}
+
+// The whole body: <w_cm> x <d_cm> at the full footprint, <h> printed mm tall, built as
+// the post / rail / slab stack drawn above.
+module legged_block(w_cm, d_cm, h, leg_cm = Leg_w, set_cm = Leg_set,
+                    top_cm = Leg_top, r = Corner_radius) {
+    set  = legged_set(w_cm, d_cm, set_cm);
+    slab = min(rise(top_cm), h / 2);
+    z1   = legged_face_z1(w_cm, d_cm, h, top_cm, set_cm);
+    union() {
+        linear_extrude(height = z1 + 0.01)                 // the posts and the rail
+            legged_2d(w_cm, d_cm, leg_cm, set_cm, r);
+        if (set > 0)                                       // out to the slab
+            translate([0, 0, z1])
+                flare(cm(set)) {
+                    legged_2d(w_cm, d_cm, leg_cm, set_cm, r);
+                    footprint_2d(w_cm, d_cm, r);
+                }
+        if (slab > 0)                                      // the top slab
+            translate([0, 0, h - slab])
+                linear_extrude(height = slab) footprint_2d(w_cm, d_cm, r);
+    }
 }

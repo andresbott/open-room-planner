@@ -1,14 +1,23 @@
-// livingroom / console — a narrow hallway / console table token, built like
-// table.scad: a thin top slab standing proud of a set-back body on four corner
-// legs, kept as one solid, support-free block. No place setting is engraved —
-// a console is walked past, not sat at.
+// livingroom / console — a narrow hall / console table: a top slab standing proud of a
+// frame-and-panel body on four corner legs (legged_block() in lib/common.scad), with one
+// shallow drawer under the top and the space a console keeps under it sunk deeper still.
 //
-// Width/Depth are the real-world top in cm: a hall console typically runs
-// 100-120 cm long and only 30-40 cm deep, pushed flat against a wall rather than
-// sat around. Height is the real height of the top — a console stands at table
-// height — shrunk by the plan scale like the footprint (see printed_h() in
-// lib/common.scad). A small 40x40 side/occasional table is the same part at
-// Height = 45 instead: coffee-table height rather than console height.
+// It used to be built like the old garden table — a body set back from the edge with corner
+// legs — and on a piece only 35 cm deep that came out as a brick: the set-back is clamped by
+// what a magnet pocket needs across the base, and its own comment said so ("on a depth this
+// shallow that second clamp wins, so by default the body barely sets back at all"). It now
+// reads by its frame instead, which is what the rest of the free-standing furniture does.
+//
+// It is NOT the dining table's slab on four open legs, and the magnet is why: a leg wide enough
+// to bury the standard 4 x 2 disc is 25 cm of real furniture at 1:40, and a console is 35 cm
+// deep. The frame keeps a 29 cm rail underneath for the pockets, so the piece holds the board
+// as hard as everything else — the same trade diningroom/bench.scad makes.
+//
+// Width/Depth are the real-world top in cm: a hall console typically runs 100-120 cm long and
+// only 30-40 cm deep, pushed flat against a wall rather than sat around. Height is the real
+// height of the top — a console stands at table height — shrunk by the plan scale like the
+// footprint (see printed_h() in lib/common.scad). A small 40x40 side/occasional table is the
+// same part at Height = 45 instead: coffee-table height rather than console height.
 
 include <../lib/common.scad>
 
@@ -19,73 +28,69 @@ Height = 80;   // cm — top of the slab (45 for a side/coffee table)
 // the printed height, mm: Height at the plan scale
 Print_h = printed_h(Height);
 
-// The top slab, in real cm — the only part of the token at full footprint, so its
-// edge is the line you read the size off. Same idea as table.scad.
-Top_h = 4;
-// How far the body under the top is set back from the edge, in real cm. Clamped
-// below exactly like table.scad: it may not lean past 45 deg (body_h) and must
-// leave a base wide enough for a magnet pocket — on a depth this shallow that
-// second clamp wins, so by default the body barely sets back at all; building
-// with smaller magnets (see Magnets below) frees it to taper properly too.
-Setback = 12;
-// A leg at each corner, flush with the edge of the top, so the corners read
-// solid while the body slopes away between them (see table.scad).
-Show_legs = true;
-Leg       = 6;   // cm
+// The frame, in real cm: slim legs and a thin top, as a console has.
+Leg      = 6;  // cm — a corner leg
+Leg_rail = 3;  // cm the rail between two legs is set back behind them
+Slab     = 3;  // cm of the height the top slab takes
+Rail_h   = 5;  // cm of leg left clear at the floor — the bottom rail
 
-// A single shallow seam under the front edge of the top, hinting at one wide
-// drawer without the full drawers() symbol — a console usually has at most one.
-// "Front" is the -Y edge, the one facing into the room when the console stands
-// back-to-wall on +Y. The gap/seam below come out 1 mm and 0.5 mm once scaled,
-// in line with the engraved symbols' margin and stroke.
-Show_drawer = false;
-Drawer_gap = 4;   // cm kept clear from the front and side edges
-Drawer_d   = 2;   // cm — how deep (Y) the seam line reads
+Show_drawer = true;
+// One shallow drawer under the top — a console has at most one course of them — with a knob
+// rather than the kitchen's grip rail, like the rest of the free-standing furniture (see
+// unit_fronts in lib/common.scad).
+Drawers  = 0;   // fronts across the band (0 = one per Drawer_width cm)
+Drawer_width = 55;  // cm — nominal width of one front
+Drawer_h = 12;  // cm of the face the drawer band takes, measured down from the top
+Knob_d   = 4;   // cm — a real drawer knob
 
-// Magnet pockets in the bottom face, in a row along the length (0 = none). Two
-// keep the piece from pivoting on the board; see Magnet_* in lib/common.scad.
-// The 35 cm depth is 8.75 mm across at 1:40 — wide enough for a 4 mm disc.
+Show_open = true;
+// The space under the drawer, sunk deeper into the front than a drawer front is, so what you
+// read between the legs is the open space a console keeps rather than another panel. Held clear
+// of the magnet pocket behind it — see open_depth().
+Open_depth = 4;  // cm
+Open_gap   = 2;  // cm between the drawer band and the top of it
+
+// Magnet pockets in the bottom face, in a row along the length (0 = none). Two keep the piece
+// from pivoting on the board. They go in the rail, the broad part of the bottom face — 29 cm of
+// it front to back is 7.25 mm at 1:40, wide enough for a 4 mm disc (see legged_floor_w() and
+// Magnet_* in lib/common.scad). The 40x40 side table has room for only ONE, and says so in the
+// render log — build that variant with Magnets=1.
 Magnets = 2;
+
+// ---- what the face is divided into ------------------------------------------
+function field_w() = legged_field_w(Width, Depth, Leg, Leg_rail);
+function face_d()  = legged_face_d(Width, Depth, Leg_rail);
+function face_z1() = legged_face_z1(Width, Depth, Print_h, Slab, Leg_rail);
+// The drawer band hangs off the top of the face; the open space fills what is left above the
+// bottom rail. Both clamped into the face, so a squashed set or a side-table height cannot push
+// either out through the other.
+function drawer_z0() = max(rise(Rail_h), face_z1() - rise(Drawer_h));
+function open_z1()   = max(rise(Rail_h), drawer_z0() - rise(Open_gap));
+// How many fronts the band carries: as asked for, or one per Drawer_width cm of the field.
+function drawers() = Drawers > 0 ? Drawers
+                                 : max(1, round(field_w() / Drawer_width));
+// How deep the open space really goes, real cm: never so deep that it breaks into the magnet
+// pocket sitting on the centre line behind it (as bedroom/dressing_table.scad clamps its knee).
+function open_depth() =
+    Magnets > 0
+        ? min(Open_depth,
+              plan_cm(cm(face_d()) / 2 - magnet_pocket_d() / 2 - Magnet_inset))
+        : Open_depth;
 
 console();
 
 module console() {
-    body_h = Print_h - rise(Top_h);
-    // Same clamp as table.scad: never lean past 45 deg, and always leave a base
-    // wide enough to stand on and take a magnet pocket.
-    base_min = magnet_min_span(magnet_d_for(Width, Depth));
-    back = max(0, min(cm(Setback), body_h,
-                       (min(cm(Width), cm(Depth)) - base_min) / 2));
     difference() {
-        union() {
-            // the body: full footprint where it meets the top, set back at the floor
-            hull() {
-                linear_extrude(height = 0.01)
-                    offset(delta = -back) footprint_2d(Width, Depth);
-                translate([0, 0, body_h - 0.01])
-                    linear_extrude(height = 0.01) footprint_2d(Width, Depth);
-            }
-            if (Show_legs) legs(body_h);
-            translate([0, 0, body_h])
-                linear_extrude(height = rise(Top_h)) footprint_2d(Width, Depth);
-        }
-        if (Show_drawer)
-            groove(0, -(Depth / 2 - Drawer_gap - Drawer_d / 2),
-                   Width - 2 * Drawer_gap, Drawer_d, Print_h);
+        legged_block(Width, Depth, Print_h, Leg, Leg_rail, Slab);
+        if (Show_drawer && face_z1() - drawer_z0() > Symbol_stroke)
+            unit_fronts(field_w(), Depth, drawer_z0(), face_z1(), drawers(), 1,
+                        face_cm = face_d(), knob_cm = Knob_d);
+        if (Show_open && open_z1() - rise(Rail_h) > Symbol_stroke && open_depth() > 0)
+            front_recess(0, (rise(Rail_h) + open_z1()) / 2,
+                         cm(field_w()) - 2 * cm(Front_gap), open_z1() - rise(Rail_h),
+                         face_d(), cm(open_depth()));
         if (Magnets > 0)
-            magnets(Width, Depth, Magnets);
-    }
-}
-
-// Legs, <h> mm tall, clipped to the outline so a rounded corner stays rounded —
-// same technique as table.scad's legs(), rectangular only (a console has no
-// round variant).
-module legs(h) {
-    intersection() {
-        linear_extrude(height = h) footprint_2d(Width, Depth);
-        for (x = [-1, 1], y = [-1, 1])
-            translate([x * (cm(Width) - cm(Leg)) / 2,
-                       y * (cm(Depth) - cm(Leg)) / 2, h / 2])
-                cube([cm(Leg), cm(Leg), h], center = true);
+            magnets(legged_floor_w(Width, Depth, Leg_rail),
+                    legged_floor_d(Width, Depth, Leg_rail), Magnets);
     }
 }

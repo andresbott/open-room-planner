@@ -11,18 +11,20 @@
 //   17.5, 24   load-bearing interior walls
 // Height is the one exception in the catalogue: it is a PRINTED height in mm, not a
 // real one. Every piece of furniture is modelled at its real height and shrunk by
-// the plan scale (see printed_h() in lib/common.scad), but a 250 cm wall at 1:40
+// the plan scale (see printed_h() in lib/common.scad), but a full 250 cm wall at 1:40
 // would be a 62.5 mm ribbon — you could not see into the room, and an opening would
-// need a bridged lintel instead of the sill/threshold drop the segments use. So a
-// wall is deliberately a low backdrop: 12.5 mm, the height of a bed at this scale, so
-// it reads as a wall around the low pieces and every taller one — a worktop at
-// 22.5 mm, a wardrobe at 59 — still stands well clear of it and can be seen over.
+// need a bridged lintel instead of the sill/threshold drop the segments use. So a wall
+// is cut off part way up instead: 25 mm, which at 1:40 is a real 100 cm. That is enough
+// to stand PROUD of the worktops and chests (22.5 mm) so a run reads as a room and not
+// as a line on the board, while a wardrobe (59 mm) still rises well clear of it and you
+// can see over the ribbon into the room. Every opening runs from its sill or threshold
+// straight up to that cut, so nothing has to bridge.
 
 include <../lib/common.scad>
 
 Thickness = 24;   // cm — 11.5 partition, 17.5/24 load-bearing
 Length    = 200;  // cm — segment length
-Height    = 12.5; // PRINTED mm — a low backdrop, not a scaled 250 cm wall
+Height    = 25;   // PRINTED mm — a real 100 cm at 1:40, not a scaled 250 cm wall
 
 // Engrave the length on one face (the -Y one), centred and half way up. It is shrunk
 // to fit the face; a segment too short for a legible number is left plain with a

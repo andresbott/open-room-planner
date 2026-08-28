@@ -37,7 +37,7 @@ exactly as the furniture does:
 
 | piece | real | printed |
 |---|---|---|
-| shower tray | 10 cm | 2.5 mm |
+| shower tray (with its waste under it) | 20 cm | 5 mm |
 | bed (top of the mattress) | 50 cm | 12.5 mm |
 | dining table | 75 cm | 18.75 mm |
 | kitchen worktop | 90 cm | 22.5 mm |
@@ -47,8 +47,20 @@ exactly as the furniture does:
 Anything that stands **on** a piece is real too — a sofa is a 45 cm seat with the
 back rising to 85 and the arms to 65, a bed is a mattress with 10 cm pillows on
 it, a bath is a 58 cm rim around a 40 cm hollow, a toilet is a 40 cm bowl in
-front of a 78 cm cistern. Only drawing detail stays in printed millimetres:
+front of a 78 cm cistern, a kitchen unit is a 90 cm worktop overhanging a carcass
+of door fronts on a 10 cm plinth. Only drawing detail stays in printed millimetres:
 engraved symbols, grooves and magnet pockets are ink and hardware, not furniture.
+
+The same goes for what is cut **into** a piece. A detail deep enough to catch the
+light beats a line engraved on the top face, because the top face is the one a
+photograph of the plan sees least of: a sink is a bowl you can put a fingertip in
+and a hob is four dished burners, not two circles and a rectangle drawn in 0.4 mm
+of ink; a fridge's doors, a cooker's oven and a run of drawer fronts are on the
+**front** face, where they are in the room and where a low angle can read them.
+`hollow()`, `base_unit()`, `unit_fronts()` and `appliance_front()` in
+`scad/lib/common.scad` do this, and every one of them stays printable the right way
+up: a hollow's walls slope out, a step outwards on the way up is a 45° flare, and a
+recess in a vertical face is a cut and never a spike.
 
 `scad/lib/common.scad` does the conversion, next to `cm()`:
 
@@ -68,11 +80,19 @@ make diningroom TABLE_H=45      # the dining tops as coffee tables
 ```
 
 `Height_min` is the floor a piece may not print below, whatever its real height
-says: a magnet pocket (1.2 mm) plus material over it. At 1:40 the shower tray
-(2.5 mm) sits right on top of it. Where a hollow no longer fits the height above a
-pocket — a bath basin, a shower pan — the part sinks what it can and says so in the
-render log; at this scale a 10 cm tray gives up almost all of its recess, so build
-the trays taller (`SHOWER_H`) if you want a pan you can feel.
+says: a magnet pocket (2.2 mm for the standard 4 x 2 disc) plus 1.2 mm of material
+over it, so **3.4 mm**. Nothing in the catalogue reaches it — the shortest piece is a
+shower tray at 5 mm — so it is a backstop for a piece you add that is lower, and for
+building at a smaller scale.
+
+Where a hollow no longer fits the height above a pocket — a bath basin, a shower
+pan — the part sinks what it can and says so in the render log. This is what sets the
+tray height: a shower tray is 20 cm because the pan has to go **above** a magnet, and
+build one shorter than about 17.5 cm and it starts giving the recess back:
+
+```
+WARNING: a 4 cm pan does not fit in a 10 cm tray over 2.2 mm of magnet pocket — sunk 0 cm instead (give it more: SHOWER_H)
+```
 
 ## Walls and openings
 
@@ -88,45 +108,57 @@ assembled from the catalogue rather than printed in one piece:
 | `wall` | thickness 11.5 / 17.5 / 24, length 25–300 | 18 |
 | `window` | opening 60–180 in 20 cm steps | 21 |
 | `door` | opening 62.5 / 75 / 87.5 / 100 / 112.5, two hands | 30 |
+| `sliding_door` | opening 150 / 175 / 200 / 250 / 300 | 15 |
 
 Thicknesses are the German standards — 11.5 cm half-brick partition, 17.5 and
 24 cm load-bearing. Door openings are DIN 18101 masonry sizes (*Rohbaumaß*), for the
-61 / 73.5 / 86 / 98.5 / 111 cm leaves sold to fit them; window widths are the 1/8 m
-series.
+61 / 73.5 / 86 / 98.5 / 111 cm leaves sold to fit them; window and slider widths are
+the 1/8 m series.
 
-**Every segment carries its size engraved on it**, so a run can be picked out of the
-box by reading the numbers rather than by measuring:
+**A segment carries its size engraved on it wherever there is room**, so a run can be
+picked out of the box by reading the numbers rather than by measuring:
 
 | part | number | where |
 |---|---|---|
 | `wall` | its length | one face (`-Y`), centred and half way up |
+| `window` | the opening width | the same face, on the parapet under the opening |
 | `door` | the opening width | the floor the leaf sweeps |
+| `sliding_door` | — | no flat surface left to put one on |
 
-A wall's number is on the face and not on top because that is the big surface on a
-piece this shape: even the thinnest partition is 12.5 mm tall and 6.25 mm long on its
-face, so all 18 segments carry it — engraved on top, only the load-bearing ones were
-wide enough (11.5 cm is a 2.875 mm ribbon at 1:40). Thickness is not engraved: it
-reads off the ribbon itself, and off which segments butt flush against it.
+The number is on the **face** and not on top because that is the big surface on a piece
+this shape, whatever its thickness: even the thinnest partition is 25 mm tall and
+6.25 mm long on its face, and a window's parapet is 20 mm tall and full length. Engraved
+on top, only the load-bearing walls were ever wide enough (11.5 cm is a 2.875 mm ribbon
+at 1:40), and on a window the sill top has the glass line down it with under a
+millimetre of band either side. Thickness is not engraved: it reads off the ribbon
+itself, and off which segments butt flush against it.
 
-Walls are the one exception to scaled heights, on purpose: **12.5 mm printed**, not
+Walls are the one exception to scaled heights, on purpose: **25 mm printed**, not
 a scaled 250 cm ceiling (which would be a 62.5 mm ribbon you could not see the room
 past, with openings needing bridged lintels instead of the sill/threshold drop
-below). That is the bed line at 1:40 — high enough to read as a wall around the low
-pieces, low enough that a worktop (22.5 mm) or a wardrobe (59 mm) still stands clear
-of it and you can see over it into the room. An opening segment is the opening
+below). 25 mm is a real **100 cm** at 1:40 — the wall cut off at parapet height, which
+is enough to stand *proud of* the worktops and chests (22.5 mm) so that a run reads as a
+room rather than as a line on the board, while a wardrobe (59 mm) still rises clear of
+it and you can see over the ribbon into the room. Every opening runs from its sill or
+threshold straight up to that cut, so nothing has to bridge. An opening segment is the
+opening
 plus a 20 cm pier at
 each end (`OPENING_REVEAL` — the pier is the only part of the segment a magnet
 pocket can go in, and 20 cm is the first round number long enough for one at
 1:40), and across the opening the ribbon **drops** — so you can see and feel a
 hole in the wall, not just read a line from above:
 
-| | left under the opening | drawn on it |
-|---|---|---|
-| window | 4.5 mm sill (about a third of the ribbon) | the glass line |
-| door | 2.7 mm threshold (about a fifth) | the closed leaf |
+| | left under the opening | drawn on it | floor it takes |
+|---|---|---|---|
+| window | **20 mm** sill — a real 80 cm parapet | the glass line | — |
+| door | 2.7 mm threshold — a step | the closed leaf | **the swing** |
+| sliding door | 2.7 mm threshold | a line per leaf, on two tracks | — |
 
-Both drops are printed mm and are set as a share of the wall height, so raising the
-ribbon (`WALL_H`) means raising them with it.
+A sill you look **over**, a threshold you walk **over** — which is why the two are
+nowhere near each other and why the two doors match. The window sill is set at a real
+sill height (`WINDOW_SILL_H`, 80 cm of the wall's 100), so it reads as the parapet under
+a window rather than as a token step; the threshold stays a low step whatever the wall
+does, because that is what a threshold is.
 
 A door then **occupies its swing**: the threshold carries on into the room as the
 quarter circle the leaf sweeps, so the outline of the piece is the arc a plan
@@ -143,17 +175,39 @@ only a 17.5 or 24 cm wall is thick enough for.
 swaps hinge end *and* the room it opens into, so `left` and `right` cover all
 four hands.
 
+A **sliding glazed door** is the third opening, and it is defined by what it does *not*
+take: the leaf runs along the wall instead of swinging, so the piece claims no floor
+beyond the wall itself — plan a sofa right up against it. It gets a door's threshold
+(you walk over it, not a sill you look over) and, instead of a swing, **one engraved
+line per leaf on two tracks** across the wall thickness, overlapping where they meet —
+which is how a plan draws a slider, and what tells the three openings apart from above:
+
+```
+window        ————————————        one centred glass line
+door          ———————— + the quarter circle it sweeps
+sliding_door  ————
+                  ————           a leaf per track, overlapping
+```
+
+`Panels` is how many leaves share the opening (2 is the usual slider, 3 a wide one) and
+`Panel_overlap` how far they overlap at the meeting stile. There is no hand: turning the
+segment round swaps which leaf is on the inner track, which is the only variant a slider
+has. It carries no engraved number — the tracks have the threshold, and between them
+there is less than a legible cap height on a wall this thin, so like a window it is told
+apart by shape.
+
 ```sh
-make walls                            # all 69 parts
-make walls WALL_H=22.5                # a taller ribbon, up to the worktop line
-                                      # (printed mm, not cm — raise the two drops
-                                      #  below with it)
+make walls                            # all 84 parts
+make walls WALL_H=37.5                # a taller ribbon — 150 cm, up to a window head
+                                      # (printed mm, not cm; raise WINDOW_SILL_H with
+                                      #  it to keep the sill 80% of the way up)
 make walls OPENING_REVEAL=25          # wider piers either side of an opening — raise
                                       # it at a smaller scale, where 20 cm of pier is
                                       # no longer enough to sink a magnet pocket into
                                       # (the render log says when it is not)
-make walls WINDOW_SILL_H=7            # a shallower drop under a window
+make walls WINDOW_SILL_H=14           # a lower sill, so more of the wall is glass
 make walls DOOR_SWING=false           # plain openings, swing arc engraved instead
+make walls SLIDING_PANELS=3           # three-leaf sliders instead of two
 ```
 
 ## Magnets
@@ -168,18 +222,19 @@ fewer, with a warning).
 difference() { footprint(160, 200, 6); magnets(160, 200, 2); }
 ```
 
-**Two discs, both 1 mm high** — so every pocket is the same depth and there are
-only two kinds of magnet to buy:
+**Two discs**, so there are only two kinds of magnet to buy:
 
-| disc | pull | goes in |
-|---|---|---|
-| 4 x 1 mm | ~90 g | everything wide enough for it — the standard |
-| 2 x 1 mm | ~20 g | pieces too narrow for a 4 mm pocket |
+| disc | pull | pocket cut for it | goes in |
+|---|---|---|---|
+| 4 x 2 mm | ~180 g | ⌀4.3 x 2.2 mm | everything wide enough for it — the standard |
+| 2 x 1 mm | ~20 g | ⌀2.3 x 1.2 mm | pieces too narrow for a 4 mm pocket |
 
 `magnets()` chooses per piece: the 4 mm disc where the footprint is at least
-6.3 mm across (25.2 cm of real furniture at 1:40), the 2 mm one below that. A
-piece that drops to the small disc says so in the render log — that is how you
-know which magnet to drop into which part:
+6.3 mm across (25.2 cm of real furniture at 1:40), the 2 mm one below that — and
+because the two are **different heights**, the pocket is cut as deep as the disc
+that goes in it (`magnet_h_for`), never to one fixed depth. A piece that drops to
+the small disc says so in the render log — that is how you know which magnet to
+drop into which part:
 
 ```
 NOTE: 200x17.5 cm at 1:40 is too narrow for a 4 mm disc — cut for 2 2x1 mm
@@ -213,7 +268,7 @@ So every part in the catalogue takes at least one magnet — the shortest 25 cm
 segments one instead of two, and a window or door one per pier.
 
 On a **vertical** board what holds a piece up is friction, not pull: roughly
-`0.3 x pull`, so a 4 mm disc's ~90 g carries ~27 g and a 2 mm one ~6 g. Since the
+`0.3 x pull`, so a 4 x 2 disc's ~180 g carries ~54 g and a 2 x 1 one ~6 g. Since the
 pieces went to scaled heights they are solid blocks rather than plates — a 160x200
 bed is 40 x 50 x 12.5 mm — and a big one printed solid weighs more than that on its
 own. Lay the board flat, or print sparse infill and give the wide pieces more than
@@ -223,6 +278,9 @@ Defaults live in `scad/lib/common.scad` and are overridable per build:
 
 ```sh
 make all MAGNET_D=5 MAGNET_D_SMALL=3   # bigger discs, if that is what you have
+make all MAGNET_H=1 HEIGHT_MIN=2.4     # back to a 1 mm-thick standard disc (drop
+                                       # HEIGHT_MIN by the same 1 mm it saves)
+make all MAGNET_H=3 HEIGHT_MIN=4.4     # ... or a deeper one, ditto the other way
 make all MAGNET_FIT=0.4                # pockets too tight? widen them
 make bedroom BED_MAGNETS=0             # no pockets
 make bedroom PAX_MAGNETS=0             # ditto, PAX wardrobes (wide frames included)
@@ -241,6 +299,9 @@ Printing and assembly:
   than the disc, because an FDM hole prints undersize: the magnet drops in by
   hand, a spot of CA glue holds it, and it can never stand proud of the bottom
   face and make the piece rock
+- the two discs are different depths (2.2 mm and 1.2 mm), but you cannot put the
+  wrong one in the wrong hole: the 2 mm disc rattles around a 4.3 mm pocket, and the
+  4 mm one does not go into a 2.3 mm one at all
 - insert every magnet the same way up: neighbouring pieces then repel gently
   instead of snapping together and skewing the layout
 - a pad is flush with the bottom face, so a padded piece still sits flat; the

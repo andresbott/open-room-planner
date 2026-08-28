@@ -1,14 +1,19 @@
-// outdoor / table — a garden table token with a slatted top, round or square.
+// outdoor / table — a garden table with a slatted top, round or square: a thin top slab at
+// the full footprint standing on four real legs with the air of a table under it
+// (slab_on_legs() in lib/common.scad), square tops on corner legs and round ones on four legs
+// round the rim, which is where a garden table's are.
 //
-// Built support-free the way the dining table used to be (diningroom/table.scad
-// now stands on a single pedestal): a thin top slab at the full footprint,
-// standing on a body set well back from the edge, plus a leg at each corner
-// (round tops: round legs round the rim). Only the top slab
-// is full size, so it stands proud of its legs like a real table, but the body
-// slopes back instead of stepping, so nothing overhangs the printer and the
-// piece stays one solid block that sits flat and takes a magnet. Grooved seams
-// across the top read as timber decking slats instead of a place setting, so it
-// does not get mistaken for the dining table indoors.
+// It used to have a sloped body set back from the edge instead — a solid taper that stood in
+// for the space under a table because a slab bridging between open legs cannot print upright.
+// It does not have to: PRINT IT FACE DOWN, top face on the bed, and the legs only ever rise
+// from the widest face, so nothing overhangs and nothing bridges (the same trade
+// diningroom/table.scad and office/desk.scad make). The magnet pockets open upwards in the
+// feet for the discs to drop into; the model itself stays the right way up, so flip it in the
+// slicer.
+//
+// Grooved seams across the top read as timber decking slats rather than a place setting, so
+// the piece is not mistaken for the dining table indoors — that and the legs, which a round
+// dining table does not have (it gets a pedestal).
 //
 // Width/Depth (or Diameter, for a round top) are the real-world top in cm, and
 // Height the real height of that top — garden-table height — shrunk by the plan
@@ -29,15 +34,13 @@ Print_h = printed_h(Height);
 // The top slab, in real cm — the only part of the token at full footprint, so its
 // edge is the line you read the size off.
 Top_h = 4;
-// How far the body under the top is set back from the edge, in real cm. It stands
-// in for the empty space under a real table, so the further back the better it
-// reads — but it is a slope, not a step, and it is clamped below (see table()).
-Setback = 16;
-// A leg at each corner of the top (round tops: four round ones round the rim),
-// Leg cm square. Legs stand vertically, flush with the edge of the top, so the
-// corners read solid while the sides slope away.
-Show_legs = true;
-Leg       = 7;   // cm
+// A leg, in real cm. A real garden-table leg is about 7 cm, which is 1.75 mm at 1:40 and
+// nothing a magnet could live in, so the token's is as wide as the pocket in its foot needs —
+// clamped up to that by slab_leg() in lib/common.scad, the same allowance the dining table and
+// the desk make.
+Leg       = 7;
+Leg_inset = 2;   // cm the legs are set in from the edge, so the top stands proud of them
+Gap_min   = 20;  // cm of clear span that must be left between two legs
 
 // Parallel grooves across the top, standing in for the seams between decking
 // boards. Slat_pitch is the real-world seam-to-seam spacing (one board's width);
@@ -49,42 +52,34 @@ Slat_pitch  = 9;   // cm
 Slat_groove = 2;   // cm
 Slat_margin = 6;   // cm
 
-// Magnet pocket in the bottom face — this top is small and square/round, so one
-// central pocket is enough to keep it from pivoting; see Magnet_* in
-// lib/common.scad.
-Magnets = 1;
+// Magnet pockets in the bottom face (0 = none) — one per FOOT, in diagonal order, so the two a
+// table takes sit corner to opposite corner and cannot let the piece tilt or pivot; four is one
+// in every foot. See slab_leg_pockets() and Magnet_* in lib/common.scad.
+Magnets = 2;
+
+// A leg and the clear span it leaves, both real cm — the shared slab-on-legs clamps, which put
+// a magnet pocket's own minimum first. A table with no magnets asks nothing of its legs.
+function min_span_cm() = Magnets > 0 ? magnet_span_cm() : 0;
+function top_w()   = Round ? Diameter : Width;
+function top_d()   = Round ? Diameter : Depth;
+function leg_w()   = slab_leg(top_w(), top_d(), Leg, min_span_cm(), Leg_inset, Gap_min);
+function leg_gap() = slab_leg_gap(top_w(), top_d(), leg_w(), Leg_inset);
 
 table();
 
 module table() {
-    // one pair of dimensions for both shapes — a round top is Diameter x Diameter
-    w      = Round ? Diameter : Width;
-    d      = Round ? Diameter : Depth;
-    body_h = Print_h - rise(Top_h);
-    // The set-back is clamped two ways, so one number works on any size and height:
-    // it may not lean out more than 45 deg (body_h), which is what keeps the slope
-    // printable without support, and it must leave a base wide enough to stand on
-    // and to take a magnet pocket.
-    base_min = magnet_min_span(magnet_d_for(w, d));
-    back     = max(0, min(cm(Setback), body_h, (min(cm(w), cm(d)) - base_min) / 2));
+    if (leg_gap() < Gap_min - 0.001)
+        echo(str("NOTE: an ", top_w(), "x", top_d(), " cm top at 1:", Scale, " leaves ",
+                 leg_gap(), " cm between legs a magnet fits in, under the ", Gap_min,
+                 " cm asked for — the legs are crowding out the air they are there to show"));
     difference() {
-        union() {
-            // the body: full footprint where it meets the top, set back at the floor
-            hull() {
-                linear_extrude(height = 0.01)
-                    offset(delta = -back) top_2d();
-                translate([0, 0, body_h - 0.01])
-                    linear_extrude(height = 0.01) top_2d();
-            }
-            if (Show_legs)
-                legs(body_h);
-            translate([0, 0, body_h])
-                linear_extrude(height = rise(Top_h)) top_2d();
-        }
+        slab_on_legs(top_w(), top_d(), Print_h, leg_w(), Top_h,
+                     round = Round, inset_cm = Leg_inset) top_2d();
         if (Show_slats)
             slats(Print_h);
         if (Magnets > 0)
-            magnets(w, d, Magnets);
+            slab_leg_pockets(top_w(), top_d(), leg_w(), Magnets,
+                             round = Round, inset_cm = Leg_inset);
     }
 }
 
@@ -92,24 +87,6 @@ module table() {
 module top_2d() {
     if (Round) footprint_round_2d(Diameter);
     else       footprint_2d(Width, Depth);
-}
-
-// Legs, <h> mm tall, clipped to the outline so a rounded corner stays rounded.
-module legs(h) {
-    intersection() {
-        linear_extrude(height = h) top_2d();
-        union() {
-            if (Round)
-                for (a = [45 : 90 : 315])
-                    translate((cm(Diameter) - cm(Leg)) / 2 * [cos(a), sin(a)])
-                        cylinder(h = h, d = cm(Leg));
-            else
-                for (x = [-1, 1], y = [-1, 1])
-                    translate([x * (cm(Width) - cm(Leg)) / 2,
-                               y * (cm(Depth) - cm(Leg)) / 2, h / 2])
-                        cube([cm(Leg), cm(Leg), h], center = true);
-        }
-    }
 }
 
 // Parallel seams across the top, standing in for the gaps between decking

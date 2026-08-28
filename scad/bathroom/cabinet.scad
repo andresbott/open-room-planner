@@ -1,19 +1,21 @@
-// bathroom / cabinet — a tall bathroom storage cabinet token: door leaves with
-// raised bar handles on the front face, standing on a recessed plinth.
+// bathroom / cabinet — a tall bathroom storage cabinet: recessed door leaves with raised bar
+// handles on the front face, standing on the same set-back plinth the rest of the set's
+// carcasses do (base_unit() in lib/common.scad).
 //
-// Everything is drawn on the FRONT FACE, which is where a cabinet's doors are and
-// the only face of this token with room for them: at 1:40 a 40x35 cabinet is
-// 10 x 8.75 mm on the plan but 10 x 45 mm across the front, the biggest face it has.
-// The top face is left plain, because a real cabinet's top is a plain panel —
-// what tells you which way the token faces, from above as well as by touch, are
-// the handles standing proud of the front.
+// Everything is on the FRONT FACE, which is where a cabinet's doors are and the only face of
+// this token with room for them: at 1:40 a 40x35 cabinet is 10 x 8.75 mm on the plan but
+// 10 x 45 mm across the front, the biggest face it has. The top face is left plain, because a
+// real cabinet's top is a plain panel — what tells you which way the token faces, from above
+// as well as by touch, are the handles standing proud of the front.
 //
-// The handles are modelled and not engraved: a handle is the one part of a
-// cabinet that sticks out, a 0.4 mm groove says nothing under a fingertip, and a
-// half-round bar running up
-// the door is a plain vertical prism — it prints off the front face with no
-// overhang at all. It leaves the token Handle_d/2 (~0.35 mm, under 1.5 cm real)
-// deeper than its footprint at the front, on the side that faces the room.
+// The handles are modelled and not engraved, and they are the one place in the set where
+// something stands off a face: a handle is the part of a cabinet that sticks out, a 0.4 mm
+// groove says nothing under a fingertip, and a half-round bar running up a door is a plain
+// VERTICAL PRISM — every layer lands squarely on the one below, so it prints off the front
+// face with no overhang at all and nothing thin enough to snap. That is what makes it worth
+// it here where a knob or a grip rail (see unit_fronts) does the job everywhere else: it
+// leaves the token Handle_d/2 (~0.35 mm, under 1.5 cm real) deeper than its footprint at the
+// front, on the side that faces the room.
 //
 // Width/Depth are the real-world footprint in cm: a slim floor-standing storage
 // cabinet, wider than it is deep. Height is the real carcass height — tall bathroom
@@ -35,12 +37,9 @@ Print_h = printed_h(Height);
 Show_doors  = true;
 Doors       = 0;    // door leaves (0 = auto, see door_count())
 Door_width  = 40;   // cm, nominal width of one leaf
-Door_seam_w = 2;    // cm, the gap between two leaves — a face-frame stile
-// Real cm — a plinth is a plinth whatever size the cabinet is. It is set back
-// across the WHOLE width, corners included: stopped short of them it leaves a
-// little foot at each end instead of a plinth.
-Plinth_h = 10;   // cm of the front face the plinth takes, set back so it reads as
-                 // a plinth and not as a line
+// The cabinet has no worktop of its own — the leaves run the full height of the carcass over
+// the plinth, as a larder's do (kitchen/cabinet.scad).
+Slab = 0;
 
 // The handles: a half-round bar up each leaf, on the edge it opens from. Printed
 // mm and fractions — hardware, so it stays the same at any scale.
@@ -59,10 +58,13 @@ Handle_inset = 1.1;   // in from the leaf's opening edge — enough to clear bot
 Magnets = 1;
 
 // ---- derived geometry -------------------------------------------------------
-// How many leaves the front splits into, and how much of its height they take.
+// How many leaves the front splits into, and the band of carcass face they fill — from the
+// top of the plinth's flare to the top of the piece, since it has no worktop.
 function door_count() = Doors > 0 ? Doors
                                  : max(1, round(Width / Door_width));
-function door_h() = Print_h - rise(Plinth_h);
+function door_z0() = unit_face_z0(Width, Depth, Print_h, Slab);
+function door_z1() = unit_face_z1(Width, Depth, Print_h, Slab);
+function door_h()  = door_z1() - door_z0();
 // The x of a leaf's two edges, printed mm from the centre of the piece.
 function leaf_lo(i, n) = -cm(Width) / 2 + cm(Width) * i / n;
 function leaf_hi(i, n) = -cm(Width) / 2 + cm(Width) * (i + 1) / n;
@@ -79,9 +81,14 @@ cabinet();
 module cabinet() {
     union() {
         difference() {
-            footprint(Width, Depth, Print_h);
-            if (Show_doors) doors(Print_h);
-            if (Magnets > 0) magnets(Width, Depth, Magnets);
+            base_unit(Width, Depth, Print_h, Slab);
+            // the leaves, recessed into the carcass face; no grip slot cut into them, since
+            // this cabinet carries real handles instead
+            if (Show_doors)
+                unit_fronts(Width, Depth, door_z0(), door_z1(),
+                            door_count(), 1, Slab, grip = false);
+            if (Magnets > 0)
+                magnets(Width, unit_plinth_d(Width, Depth), Magnets);
         }
         // added last, so nothing cuts into them
         if (Show_handles)
@@ -89,33 +96,11 @@ module cabinet() {
     }
 }
 
-// The front of the cabinet: the plinth set back along the bottom, and a seam
-// between every pair of leaves running from the plinth up to the top face.
-module doors(top_z, depth = Label_depth) {
-    n  = door_count();
-    pz = rise(Plinth_h);   // top of the plinth, printed mm
-    // overshot past both sides, so the plinth runs right across the front
-    front_cut(0, cm(Width) + 1, pz / 2, pz, depth);
-    if (n > 1)
-        for (i = [1 : n - 1])
-            front_cut(leaf_lo(i, n), cm(Door_seam_w),
-                      (pz + top_z) / 2 + 0.01, top_z - pz + 0.02,
-                      depth);
-}
-
 // A handle: a bar running up the door, centred on the front face so half of it is
 // buried in the leaf and half stands proud. A vertical prism — every layer lands
 // squarely on the one below, so it needs no support. Add it to the solid.
 module handle(cx) {
     h = door_h() * Handle_span;
-    translate([cx, -cm(Depth) / 2, rise(Plinth_h) + door_h() * Handle_z - h / 2])
+    translate([cx, -cm(Depth) / 2, door_z0() + door_h() * Handle_z - h / 2])
         cylinder(h = h, d = Handle_d);
-}
-
-// A rectangle cut <depth> mm into the front (-Y) face: <w> x <h> printed mm,
-// centred on <cx>,<cz> from the centre of that face's width and the bottom of
-// the piece. The counterpart of groove() for the one face that is not the top.
-module front_cut(cx, w, cz, h, depth = Label_depth) {
-    translate([cx, -cm(Depth) / 2 + (depth - 0.01) / 2, cz])
-        cube([w, depth + 0.01, h], center = true);
 }

@@ -29,8 +29,9 @@ Thickness = 11.5;   // cm — 11.5 partition, 17.5/24 load-bearing
 Width     = 87.5;   // cm — the masonry opening
 Frame     = 1.5;    // cm — opening less leaf (DIN 18101)
 Reveal    = 20;     // cm — pier of wall either side of it (as window.scad)
-Height    = 12.5;   // PRINTED mm — as wall.scad
-Threshold_h = 2.7;  // printed mm — lower than a window sill (see window.scad)
+Height    = 25;     // PRINTED mm — as wall.scad
+Threshold_h = 2.7;  // printed mm — a step you walk over, not a parapet you look over:
+                    // it stays put when the wall gets taller (cf. window.scad's Sill_h)
 
 Hand = "left";      // "left" or "right" — which end carries the hinge
 
