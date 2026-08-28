@@ -8,23 +8,27 @@
 // square tray, 80x120 a common rectangular one; the Makefile builds a range of
 // standard sizes. Height is the real height of the tray — the pan plus the waste
 // build-up under it — shrunk by the plan scale like the footprint (see printed_h()
-// in lib/common.scad). It is the lowest piece of the set by a long way, and the only
-// one that can reach Height_min.
+// in lib/common.scad). It is the lowest piece of the set by a long way, so it is the
+// one whose height is set by what the piece has to CONTAIN rather than by the fixture
+// alone: 20 cm is a tray on the frame its trap sits in, and at 1:40 that is the 5 mm
+// it takes to bury a magnet pocket and still sink the full pan above it (see tray_h()).
+// Below about 17.5 cm the recess starts to be clamped away and the render log says so.
 
 include <../lib/common.scad>
 
 Width  = 90;  // cm
 Depth  = 90;  // cm
-Height = 10;  // cm — the pan and the waste under it: floor level
+Height = 20;  // cm — the pan and the waste build-up under it: floor level
 
 // the printed height, mm: Height at the plan scale
 Print_h = printed_h(Height);
 
 Show_tray = true;   // recess the pan floor and sink the drain into it
 // The flat rim left around the sunken floor and how far the floor drops below it,
-// both real cm. There is not much height to give away here, so the recess is clamped
-// to what the tray leaves over a magnet pocket — see tray_h(), which warns when it
-// had to take any of it back.
+// both real cm. At the default Height the full 4 cm goes in — a 1 mm step at 1:40, deep
+// enough to see and to feel — but the recess is still clamped to whatever the tray
+// leaves over a magnet pocket, so a shorter tray loses it gracefully: see tray_h(),
+// which warns when it had to take any of it back.
 Rim_w      = 5;    // cm, flat rim around the pan
 Tray_depth = 4;    // cm, how far the floor sits below the rim
 Tray_floor = 0.6;  // printed mm kept under the pan floor, over a magnet pocket

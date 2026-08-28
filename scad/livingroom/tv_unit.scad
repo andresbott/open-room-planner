@@ -1,7 +1,13 @@
-// livingroom / tv_unit — a TV unit / media console token: a low, wide sideboard
-// carrying an upright TV that stands on its back edge, the way the dressing table
-// carries a mirror (see bedroom/dressing_table.scad). A row of door / drawer fronts
-// is engraved on the free top in front of the screen.
+// livingroom / tv_unit — a TV unit / media console: a low, wide frame-and-panel carcass on
+// four corner legs (legged_block() in lib/common.scad) carrying an upright TV that stands on
+// its back edge, the way the dressing table carries a mirror (see
+// bedroom/dressing_table.scad), with a row of fronts on the front (-Y) face below it.
+//
+// The fronts used to be the drawers() pictogram engraved on the free top in front of the
+// screen, on the argument that the top was all the token had left. It is not: the front face
+// is where a media unit's doors are and where a low angle can see them, so that is where they
+// went, and the top in front of the TV is left as the surface it really is — where a soundbar
+// or a console box would sit.
 //
 // The screen is a raised board drawn with cushion() — a tapered pad that narrows
 // toward the top, so it stands as a thin upright panel and still prints support-
@@ -47,10 +53,21 @@ Screen_hfrac  = 0.80;    // screen height / board height (the top / bottom bezel
 Screen_centre = 0.52;    // height of the screen centre, 0..1 up the board
 Screen_depth  = 0.5;     // printed mm the screen is sunk into the front face
 
+// -- Carcass -------------------------------------------------------------------
+// The frame, in real cm: slim legs and a thin top, as a low media unit has.
+Leg      = 6;  // cm — a corner leg
+Leg_rail = 3;  // cm the panel between two legs is set back behind them
+Slab     = 3;  // cm of the height the top takes
+Rail_h   = 4;  // cm of leg left clear under the bottom front
+
 Show_fronts = true;
-// Magnet pockets in the bottom face, in a row along the width (0 = none). Two keep
-// the piece from pivoting; see Magnet_* in lib/common.scad. A 40 cm depth is 10 mm
-// across at 1:40 — comfortably wide enough for a 4 mm disc.
+Fronts      = 2;  // fronts across the face — a media unit is a bay or two wide
+Knob_d      = 4;  // cm — a real knob, as on the rest of the free-standing furniture
+
+// Magnet pockets in the bottom face, in a row along the width (0 = none). Two keep the piece
+// from pivoting. They go in the panel's own footprint, the broad part of the bottom face —
+// 34 cm of it front to back is 8.5 mm at 1:40, comfortably wide enough for a 4 mm disc (see
+// legged_floor_w() and Magnet_* in lib/common.scad).
 Magnets = 2;
 
 tv_unit();
@@ -68,20 +85,20 @@ module tv_unit() {
     // out at the top — the same allowance the mirror's oval uses.
     cut = Screen_depth + TV_taper + 0.1;
 
-    // the fronts sit on the free top in front of the board; with no TV they centre
-    tv_take = Show_tv ? TV_gap + TV_d : 0;     // cm of depth the board takes at the back
-    front_d = Depth - tv_take;                  // cm left for the fronts symbol
-    patch   = min(cm(Width), cm(front_d)) - 2 * Symbol_margin;
-
     union() {
         difference() {
-            footprint(Width, Depth, Print_h);
-            // a row of door / drawer fronts on the free top, as big as it allows
+            legged_block(Width, Depth, Print_h, Leg, Leg_rail, Slab);
+            // a row of fronts on the panel between the legs, where a media unit's doors are
             if (Show_fronts)
-                translate([0, -cm(tv_take) / 2, 0])
-                    drawers(drawers_size(patch, patch), Print_h, rows = 2);
+                unit_fronts(legged_field_w(Width, Depth, Leg, Leg_rail), Depth,
+                            rise(Rail_h),
+                            legged_face_z1(Width, Depth, Print_h, Slab, Leg_rail),
+                            Fronts, 1,
+                            face_cm = legged_face_d(Width, Depth, Leg_rail),
+                            knob_cm = Knob_d);
             if (Magnets > 0)
-                magnets(Width, Depth, Magnets);
+                magnets(legged_floor_w(Width, Depth, Leg_rail),
+                        legged_floor_d(Width, Depth, Leg_rail), Magnets);
         }
         // the upright TV, the glass cut into its front (-Y) face
         if (Show_tv)

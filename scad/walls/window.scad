@@ -15,22 +15,32 @@
 // to read as the same wall — which means it is a printed height, the catalogue's one
 // exception to real, scaled heights (see the note in wall.scad).
 //
-// Unlike wall.scad this carries no engraved number — a pier is 5 mm long at 1:40, too
-// short for a legible one (see wall_label) — so a window is told apart by its shape,
-// and its thickness by the neighbours it butts against.
+// Like wall.scad it carries its size engraved on one face — the opening width here,
+// rather than the segment length — and for the same reason: the outside of the parapet is
+// a 20 mm tall, full-length surface, the one big flat face a window segment has, and it
+// is that whatever the wall thickness. The alternatives are all too small at 1:40: a pier
+// is 5 mm long, and the sill top has the glass line down it and under a millimetre of
+// band left either side. Thickness is not engraved, on a window or on a wall: it reads
+// off the ribbon and off the neighbours the segment butts against.
 
 include <../lib/common.scad>
 
 Thickness = 11.5;  // cm — 11.5 partition, 17.5/24 load-bearing
 Width     = 100;   // cm — the window opening
 Reveal    = 20;    // cm — pier of wall either side of it (see Magnets)
-Height    = 12.5;  // PRINTED mm — as wall.scad
-Sill_h    = 4.5;   // printed mm — what is left under the opening (~a third of Height)
+Height    = 25;    // PRINTED mm — as wall.scad
+Sill_h    = 20;    // printed mm — the parapet under the opening: a real 80 cm at 1:40
 
 // The glass, drawn as a plan draws it: one line down the middle of the sill, the
 // full width of the opening. It is what tells a window from a door (door.scad has
 // a leaf and a swing arc instead, on a lower threshold).
 Show_glass = true;
+
+// Engrave the opening width on the outside (-Y) face of the parapet — centred on the
+// opening and half way up, so it clears the magnet pads at the foot. Shrunk to fit that
+// face, and left off with a warning if it ever cannot (a very low sill, or a smaller
+// scale), exactly as wall.scad does with its length.
+Show_label = true;
 
 // Magnet pockets in the bottom face, one per pier (0 = none): at the two ends, where the
 // segment butts its neighbours, so it cannot pivot — and holding it down there rather
@@ -56,8 +66,24 @@ module window() {
             if (Magnets > 0) pier_pads();
         }
         if (Show_glass) glass(Sill_h);
+        if (Show_label) width_label();
         if (Magnets > 0) pier_magnets();
     }
+}
+
+// The opening width cut into the face of the parapet. Sized to that face — no taller
+// than the sill, no longer than the opening — and dropped below the legibility floor
+// rather than printed as a blob (cf. wall_label() in wall.scad).
+module width_label() {
+    txt  = str(Width);
+    h    = Sill_h        - 2 * Symbol_margin;   // room up the face of the parapet
+    w    = cm(Width)     - 2 * Symbol_margin;   // ... along the opening
+    size = label_size(w, h, txt);
+    if (size >= Symbol_min)
+        label_front(txt, Thickness, z = Sill_h / 2, size = size);
+    else
+        echo(str("WARNING: a ", Width, " cm window on a ", Sill_h,
+                 " mm sill at 1:", Scale, " has no face left to engrave its width"));
 }
 
 // Total segment length in cm — the opening plus a pier at each end.

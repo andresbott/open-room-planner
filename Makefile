@@ -13,7 +13,6 @@
 # a clean-<room> target, and list it under `all` / `clean`.
 
 OPENSCAD   ?= openscad
-CONVERT    ?= convert
 SCAD_DIR   := scad
 LIB_DIR    := $(SCAD_DIR)/lib
 FILES_DIR  := files
@@ -32,18 +31,23 @@ RESOLUTION ?= 64
 #   HEIGHT_SCALE  squash every piece (0.75 = three quarters as tall) while keeping
 #                 them in the right order — a shorter, cheaper set to print
 #   HEIGHT_MIN    the least a piece may print, whatever its real height: a magnet
-#                 pocket plus material over it. Only a shower tray reaches it.
+#                 pocket (2.2 mm for the standard 4x2 disc) plus 1.2 mm of material
+#                 over it. Only a shower tray reaches it — raise it along with
+#                 MAGNET_H if you fit a deeper magnet.
 HEIGHT_SCALE ?= 1
-HEIGHT_MIN   ?= 2.4
+HEIGHT_MIN   ?= 3.4
 
 # Magnet pockets in the bottom face, in printed mm — hardware, so they are not
-# scaled. Two discs cover the catalogue, both 1 mm high: the standard 4x1, and a
-# 2x1 for pieces too narrow for it (a chair leg, a partition wall) — each part
-# gets the bigger one that fits, and says so when it drops to the small one. How
-# many go in a part is a per-part parameter.
+# scaled. Two discs cover the catalogue: the standard 4x2, and a 2x1 for pieces too
+# narrow for it (a chair leg, a partition wall) — each part gets the bigger one that
+# fits, and says so when it drops to the small one. They are different heights, so a
+# pocket is cut as deep as the disc that goes in it: 2.2 mm under a piece of furniture,
+# 1.2 under a wall (see HEIGHT_MIN above — the shallowest piece has to bury the deeper
+# one). How many go in a part is a per-part parameter.
 MAGNET_D       ?= 4
 MAGNET_D_SMALL ?= 2
-MAGNET_H       ?= 1
+MAGNET_H       ?= 2
+MAGNET_H_SMALL ?= 1
 # Printer allowance on a pocket: an FDM hole prints undersize, so it is cut this
 # much wider and deeper than the disc. Raise it if the magnets will not drop in,
 # lower it if they fall out.
@@ -51,13 +55,15 @@ MAGNET_FIT     ?= 0.3
 MAGNET_FIT_H   ?= 0.2
 
 # Shared by every part; each part adds its own dimensions on top.
-COMMON = Scale=$(SCALE);Resolution=$(RESOLUTION);Height_scale=$(HEIGHT_SCALE);Height_min=$(HEIGHT_MIN);Magnet_d=$(MAGNET_D);Magnet_d_small=$(MAGNET_D_SMALL);Magnet_h=$(MAGNET_H);Magnet_fit=$(MAGNET_FIT);Magnet_fit_h=$(MAGNET_FIT_H)
+COMMON = Scale=$(SCALE);Resolution=$(RESOLUTION);Height_scale=$(HEIGHT_SCALE);Height_min=$(HEIGHT_MIN);Magnet_d=$(MAGNET_D);Magnet_d_small=$(MAGNET_D_SMALL);Magnet_h=$(MAGNET_H);Magnet_h_small=$(MAGNET_H_SMALL);Magnet_fit=$(MAGNET_FIT);Magnet_fit_h=$(MAGNET_FIT_H)
 
-# Preview-image settings (%.png rule: OpenSCAD render -> ImageMagick trim + margin).
+# Preview-image settings. The %.png rule renders straight to PNG (no post-processing).
+# IMG_COLOR is a colorscheme *name*. The custom "OceanPlan" scheme is shipped in this
+# repo under $(SCAD_CONFIG_DIR); it is made visible to OpenSCAD at render time via
+# XDG_CONFIG_HOME, since OpenSCAD 2021.01 resolves schemes by name, not by file path.
 IMG_SIZE   ?= 1600,1600
-IMG_COLOR  ?= Cornfield
-IMG_BG     ?= rgb(255,255,229)
-IMG_MARGIN ?= 7%
+IMG_COLOR  ?= OceanPlan
+SCAD_CONFIG_DIR ?= $(CURDIR)/openscad-config
 IMG_OPTS   ?= --imgsize=$(IMG_SIZE) --colorscheme=$(IMG_COLOR) --viewall --autocenter --render
 
 # Renders are skipped when the outputs are newer than the .scad sources and this
@@ -122,11 +128,14 @@ $(foreach s,$(HEMNES_SIZES),$(eval $(call part,bedroom,ikea_hemnes,Width=$(word 
 
 # -- Bed-end benches: one piece per common width, in cm — 100/120 for a single or
 #    small double, 140/160 to span a queen/king footboard. Depth stays 40 (a
-#    bench's seat depth). Height is seat height, cushion included.
+#    bench's seat depth). Height is seat height — the flat top face, no cushion.
+#    Printed as a U — a seat slab on an end panel at each end, open underneath — so
+#    print it UPSIDE DOWN, seat face on the bed: nothing to bridge, nothing to support.
 BENCH_WIDTHS := 100 120 140 160
 BENCH_DEPTH  ?= 40
 BENCH_H      ?= 45
-# magnet pockets per bench, in a row along the width (0 = none)
+# magnet pockets per bench: one in the foot of each end panel, the only material a U
+# has at floor level (0 = none, 2 = the pair)
 BENCH_MAGNETS ?= 2
 $(foreach w,$(BENCH_WIDTHS),$(eval $(call part,bedroom,bench,Width=$(w);Depth=$(BENCH_DEPTH);Height=$(BENCH_H);Magnets=$(BENCH_MAGNETS),bench_$(w)x$(BENCH_DEPTH))))
 # The branded IKEA EKENÄSET bench: the same bench part at its real 112 x 48 cm
@@ -240,25 +249,41 @@ livingroom: $(LIVINGROOM_STLS) $(LIVINGROOM_PNGS) ## render living-room parts + 
 
 # ---- Kitchen -----------------------------------------------------------------
 KITCHEN_DIR := $(FILES_DIR)/kitchen
-# Real heights in cm. Worktop, island, sink and the slot-in cooker all finish at the
-# 90 cm counter line; an integrated dishwasher's own carcass is 82; a bar stool puts
-# the seat at 65; the larder unit and the fridge run nearly floor to ceiling.
-WORKTOP_H    ?= 90
-ISLAND_H     ?= 90
-SINK_H       ?= 90
-COOKER_H     ?= 90
-DISHWASHER_H ?= 82
-BAR_STOOL_H  ?= 65
-K_CABINET_H  ?= 200
-FRIDGE_H     ?= 185
+# Real heights in cm. Every counter unit — worktop, island, sink, corner, peninsula, the
+# slot-in cooker AND the integrated dishwasher — finishes at the 90 cm counter line, so a
+# row of them stands level (the dishwasher carries its own worktop slab too, see
+# dishwasher.scad); a bar stool puts the seat at 65; the larder unit, the oven housing and
+# the fridge run nearly floor to ceiling.
+WORKTOP_H       ?= 90
+ISLAND_H        ?= 90
+SINK_H          ?= 90
+COOKER_H        ?= 90
+DISHWASHER_H    ?= 90
+BAR_STOOL_H     ?= 65
+K_CABINET_H     ?= 200
+FRIDGE_H        ?= 185
+CORNER_UNIT_H   ?= 90
+BREAKFAST_BAR_H ?= 90
+OVEN_COLUMN_H   ?= 200
 $(eval $(call part,kitchen,worktop,Height=$(WORKTOP_H);Magnets=2,worktop))
+# a short run the width of the dishwasher (60 cm), to sit beside it or fill a gap; near
+# square, so one central pocket like the other 60 cm units rather than the long run's two
+$(eval $(call part,kitchen,worktop,Width=60;Height=$(WORKTOP_H);Magnets=1,worktop_60))
 $(eval $(call part,kitchen,island,Height=$(ISLAND_H);Magnets=2,island))
 $(eval $(call part,kitchen,sink,Height=$(SINK_H);Magnets=2,sink))
 $(eval $(call part,kitchen,cooker,Height=$(COOKER_H);Magnets=1,cooker))
+# a wider range: 90 cm with six burners (3x2) and a double oven
+$(eval $(call part,kitchen,cooker,Width=90;Height=$(COOKER_H);Burner_cols=3;Oven_cols=2;Magnets=2,cooker_90))
 $(eval $(call part,kitchen,dishwasher,Height=$(DISHWASHER_H);Magnets=1,dishwasher))
 $(eval $(call part,kitchen,bar_stool,Height=$(BAR_STOOL_H);Magnets=1,bar_stool))
 $(eval $(call part,kitchen,cabinet,Height=$(K_CABINET_H);Magnets=1,cabinet))
 $(eval $(call part,kitchen,fridge,Height=$(FRIDGE_H);Magnets=1,fridge))
+# The corner unit takes one pocket under each arm — corner to opposite corner, which is
+# what stops an L pivoting (see Magnets in corner_unit.scad, where 1 and 3 mean other
+# layouts rather than fewer pockets in a row).
+$(eval $(call part,kitchen,corner_unit,Height=$(CORNER_UNIT_H);Magnets=2,corner_unit))
+$(eval $(call part,kitchen,breakfast_bar,Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar))
+$(eval $(call part,kitchen,oven_column,Height=$(OVEN_COLUMN_H);Magnets=1,oven_column))
 
 KITCHEN_STLS := $(STLS_kitchen)
 KITCHEN_PNGS := $(KITCHEN_STLS:.stl=.png)
@@ -281,13 +306,14 @@ TABLE_SQUARE_SIZES := 70x70 80x80 90x90
 #    Round tops, by diameter in cm.
 TABLE_ROUND_DIAMS  := 90 100 110 120
 TABLE_H            ?= 75
-# magnet pockets per table, in a row along the longer side (0 = none). A square or
-# round top has no longer side and no way to look skewed, so it gets a single
-# pocket in the middle instead of a row.
+# magnet pockets per table (0 = none). A rectangular or square top stands on four corner
+# legs, so a pocket is one FOOT, taken in diagonal order — two of them, corner to opposite
+# corner, are what stop the piece pivoting, and four is one in every foot. A round top is
+# a single pedestal with one pocket in the middle of its foot, which cannot pivot at all.
 TABLE_MAGNETS        ?= 2
 TABLE_CENTRE_MAGNETS ?= 1
 $(foreach s,$(TABLE_RECT_SIZES),$(eval $(call part,diningroom,table,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(TABLE_H);Magnets=$(TABLE_MAGNETS),table_$(s))))
-$(foreach s,$(TABLE_SQUARE_SIZES),$(eval $(call part,diningroom,table,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(TABLE_H);Magnets=$(TABLE_CENTRE_MAGNETS),table_$(s))))
+$(foreach s,$(TABLE_SQUARE_SIZES),$(eval $(call part,diningroom,table,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(TABLE_H);Magnets=$(TABLE_MAGNETS),table_$(s))))
 $(foreach d,$(TABLE_ROUND_DIAMS),$(eval $(call part,diningroom,table,Round=true;Diameter=$(d);Height=$(TABLE_H);Magnets=$(TABLE_CENTRE_MAGNETS),table_round_$(d))))
 
 # The chair carries two heights: the top of its back (Height) over the seat it rises
@@ -329,14 +355,16 @@ $(foreach s,$(BATHTUB_OVAL_SIZES),$(eval $(call part,bathroom,bathtub,Oval=true;
 # -- Shower trays: <width>x<depth> footprints in cm — square trays plus a couple
 #    of rectangular ones, from a compact 80x80 through the common 90x90 / 80x120
 #    up to a 90x140 walk-in (size range per usacabinetstore.com standard-shower-
-#    sizes). Height is the real height of the tray — the pan plus the waste under
-#    it, floor level — which makes it the lowest piece in the catalogue by a long
-#    way. The pan is a real sunken floor with a sunk drain, not an engraved outline
-#    (see scad/bathroom/shower.scad) — but at 1:40 a 10 cm tray is only 2.5 mm tall,
-#    so nearly all of the recess is clamped away over the magnet pocket (the render
-#    log says how much): build with a larger SHOWER_H for a pan you can feel.
+#    sizes). The pan is a real sunken floor with a sunk drain, not an engraved outline
+#    (see scad/bathroom/shower.scad), and SHOWER_H is what makes room for it: it is the
+#    real height of the tray plus the waste build-up under it, and 20 cm — a tray on the
+#    frame its trap sits in — is 5 mm at 1:40, which is what it takes to bury a 2.2 mm
+#    magnet pocket and still sink the full 4 cm pan above it. Still the lowest piece in
+#    the catalogue by a long way. Build shorter and the recess is clamped to what is
+#    left, with a warning in the render log (below ~17.5 cm), so a flat tray is a
+#    SHOWER_H away if that is what you want.
 SHOWER_SIZES := 80x80 90x90 100x100 120x120 80x120 90x140
-SHOWER_H     ?= 10
+SHOWER_H     ?= 20
 # one central magnet pocket per tray is enough for a near-square piece (0 = none)
 SHOWER_MAGNETS ?= 1
 $(foreach s,$(SHOWER_SIZES),$(eval $(call part,bathroom,shower,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(SHOWER_H);Magnets=$(SHOWER_MAGNETS),shower_$(s))))
@@ -378,9 +406,42 @@ DESK_H            ?= 74
 OFFICE_CHAIR_H    ?= 95
 OFFICE_CHAIR_SEAT ?= 47
 FILING_CABINET_H  ?= 72
-$(eval $(call part,office,desk,Height=$(DESK_H);Magnets=2,desk))
-$(eval $(call part,office,chair,Height=$(OFFICE_CHAIR_H);Seat=$(OFFICE_CHAIR_SEAT);Magnets=1,chair))
+# A task chair stands on its five-star base, which is wider than the seat, so the
+# base is what it occupies on the plan (65 cm base, 50 cm seat).
+OFFICE_CHAIR_BASE ?= 65
+OFFICE_CHAIR_SEAT_D ?= 50
+# -- Desks: one piece per standard top, in cm. The token is a slab on a panel
+#    support at each end — a U, printed upside down — with the size engraved on top.
+#    Two magnet pockets, one in each support foot, an end of the desk apart.
+DESK_SIZES   := 120x60 140x70 150x80 160x80
+DESK_MAGNETS ?= 2
+$(foreach s,$(DESK_SIZES),$(eval $(call part,office,desk,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(DESK_H);Magnets=$(DESK_MAGNETS),desk_$(s))))
+$(eval $(call part,office,chair,Base=$(OFFICE_CHAIR_BASE);Diameter=$(OFFICE_CHAIR_SEAT_D);Height=$(OFFICE_CHAIR_H);Seat=$(OFFICE_CHAIR_SEAT);Magnets=1,chair))
 $(eval $(call part,office,filing_cabinet,Height=$(FILING_CABINET_H);Magnets=1,filing_cabinet))
+
+# -- IKEA IVAR pine shelving: <width>x<depth>x<height> in cm, built from the real side
+#    units and shelves — the 48 wide unit takes one 42 cm shelf, 89 one 83, 174 two and
+#    259 three, at either side-unit depth (30/50) and either height (124/179/226). Like
+#    the bookshelf these are real open bays and shelves cut back into the front face, not
+#    a symbol engraved on top — printed on its back the posts and shelves stand as clean
+#    vertical walls (see scad/office/ikea_ivar.scad). Bays and shelves are derived from
+#    the size, so a size not listed here still comes out right. Each unit carries its
+#    WIDTH engraved on the top face, the way a wall segment carries its length.
+#    IVAR_BACK is the back panel, in real cm. The real IVAR has none, but the token keeps
+#    one so it prints: laid on its back the panel is a continuous first layer instead of a
+#    grid of single-perimeter walls, and it braces posts and shelves that are all at the
+#    print floor at 1:40. IVAR_BACK=0 renders the true open frame.
+IVAR_SIZES ?= 48x30x124 48x30x179 89x30x179 89x50x179 174x30x179 174x50x179 \
+              174x30x226 259x30x179 259x50x179
+IVAR_BACK  ?= 2
+# magnet pockets per unit, in a row along the width (0 = none). The 48 cm unit is only
+# 12 mm long at 1:40 and takes one; the widths in IVAR_WIDE_WIDTHS get a row of
+# IVAR_WIDE_MAGNETS instead, so a 259 cm run cannot pivot on the plan.
+IVAR_MAGNETS      ?= 1
+IVAR_WIDE_WIDTHS  := 89 174 259
+# ... and IVAR_MAGNETS=0 still means no pockets on any unit, wide ones included.
+IVAR_WIDE_MAGNETS ?= $(if $(filter 0,$(IVAR_MAGNETS)),0,2)
+$(foreach s,$(IVAR_SIZES),$(eval $(call part,office,ikea_ivar,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(word 3,$(subst x, ,$(s)));Back_th=$(IVAR_BACK);Magnets=$(if $(filter $(word 1,$(subst x, ,$(s))),$(IVAR_WIDE_WIDTHS)),$(IVAR_WIDE_MAGNETS),$(IVAR_MAGNETS)),ikea_ivar_$(s))))
 
 OFFICE_STLS := $(STLS_office)
 OFFICE_PNGS := $(OFFICE_STLS:.stl=.png)
@@ -459,7 +520,10 @@ OD_CHAIR_SEAT  ?= 42
 OD_SOFA_H      ?= 80
 OD_SOFA_SEAT   ?= 42
 PLANTER_H      ?= 40
-$(eval $(call part,outdoor,table,Height=$(OD_TABLE_H);Magnets=1,table))
+# magnet pockets per table: one per foot, in diagonal order (see outdoor/table.scad) — two,
+# corner to opposite corner, are what stop a legged top tilting or pivoting
+OD_TABLE_MAGNETS ?= 2
+$(eval $(call part,outdoor,table,Height=$(OD_TABLE_H);Magnets=$(OD_TABLE_MAGNETS),table))
 $(eval $(call part,outdoor,chair,Height=$(OD_CHAIR_H);Seat=$(OD_CHAIR_SEAT);Magnets=1,chair))
 $(eval $(call part,outdoor,sofa,Height=$(OD_SOFA_H);Seat=$(OD_SOFA_SEAT);Magnets=2,sofa))
 $(eval $(call part,outdoor,planter,Height=$(PLANTER_H);Magnets=1,planter))
@@ -478,13 +542,13 @@ outdoor: $(OUTDOOR_STLS) $(OUTDOOR_PNGS) ## render outdoor parts + previews -> f
 # piece this shape, so every segment can carry it, the 2.875 mm 11.5 cm partition and
 # the 25 cm stub included — see wall.scad).
 # Square-ended, so segments butt flush and corners meet. A wall is the one part whose
-# height is PRINTED mm rather than a scaled real height (see wall.scad): 12.5 mm, the
-# bed line at 1:40 — enough to read as a wall around the low pieces, low enough that a
-# worktop (22.5 mm) or a wardrobe (59) still stands clear and you can see over it.
+# height is PRINTED mm rather than a scaled real height (see wall.scad): 25 mm, a real
+# 100 cm at 1:40 — proud of the worktops and chests (22.5 mm) so a run reads as a room,
+# while a wardrobe (59 mm) still rises clear of it and you can see over the ribbon.
 WALLS_DIR := $(FILES_DIR)/walls
 WALL_THICKNESSES := 11.5 17.5 24
 WALL_LENGTHS     := 25 50 100 150 200 300
-WALL_H           ?= 12.5
+WALL_H           ?= 25
 # Magnet pockets per wall (0 = none). A wall is a thin ribbon — 2.875..6 mm across
 # printed at 1:40 — so the load-bearing walls drop to the small 2x1 disc (see
 # MAGNET_D_SMALL), and the 11.5 cm partition, too thin for even that, gets a low round
@@ -494,7 +558,8 @@ WALL_H           ?= 12.5
 WALL_MAGNETS ?= 2
 $(foreach t,$(WALL_THICKNESSES),$(foreach l,$(WALL_LENGTHS),$(eval $(call part,walls,wall,Thickness=$(t);Length=$(l);Height=$(WALL_H);Magnets=$(WALL_MAGNETS),wall_$(t)x$(l)))))
 
-# -- Openings: windows and doorways, as short segments that butt between the plain
+# -- Openings: windows, doorways and sliding glazed doors, as short segments that butt
+#    between the plain
 #    ones — [ wall 100 ][ window 100 ][ wall 50 ] — so an opening can go anywhere in
 #    a run and the catalogue stays one part per size per thickness. Each is the
 #    opening plus a pier (OPENING_REVEAL) at each end, at the same thickness and
@@ -506,19 +571,33 @@ $(foreach t,$(WALL_THICKNESSES),$(foreach l,$(WALL_LENGTHS),$(eval $(call part,w
 #    A door then carries that threshold on into the room as the quarter circle the
 #    leaf sweeps (DOOR_SWING), so the piece occupies the floor the door needs and
 #    nothing can be planned into it — and that plate carries the opening width
-#    engraved on it, as a plain wall carries its length. Sizes are the German
+#    engraved on it, as a plain wall carries its length.
+#    A SLIDING glazed door is the third kind: a door's threshold (you walk over it), but
+#    the leaf runs along the wall instead of swinging, so the piece takes NO floor —
+#    plan a sofa right up against it. It carries a line per leaf on two tracks across the
+#    wall instead of a swing (see sliding_door.scad), which is what tells the three
+#    openings apart from above. Sizes are the German
 #    standards — windows on the
 #    1/8 m series they are sold in, doors the DIN 18101 masonry opening (Rohbaumass)
-#    for the 61/73.5/86/98.5/111 cm leaves. DOOR_HANDS is which end the hinge is on;
-#    turning a segment round in the plan gives the other two hands (see door.scad).
+#    for the 61/73.5/86/98.5/111 cm leaves, sliders on the 1/8 m series too.
+#    DOOR_HANDS is which end the hinge is on;
+#    turning a segment round in the plan gives the other two hands (see door.scad) — a
+#    slider needs no hand at all, turning it round is the only variant it has.
 OPENING_REVEAL   ?= 20
 WINDOW_WIDTHS    := 60 80 100 120 140 160 180
-WINDOW_SILL_H    ?= 4.5
+WINDOW_SILL_H    ?= 20
 DOOR_WIDTHS      := 62.5 75 87.5 100 112.5
 DOOR_HANDS       := left right
 DOOR_THRESHOLD_H ?= 2.7
 # false = a plain opening, with the swing arc engraved in the threshold instead
 DOOR_SWING       ?= true
+# Sliding glazed doors: the patio widths, on the same threshold as a hinged door (they
+# are both walked over) and with SLIDING_PANELS leaves sharing the opening — 2 is the
+# usual slider, 3 a wide one. SLIDING_OVERLAP is how far the leaves overlap where they
+# meet, in cm.
+SLIDING_WIDTHS   := 150 175 200 250 300
+SLIDING_PANELS   ?= 2
+SLIDING_OVERLAP  ?= 5
 # Magnet pockets per pier (0 = none). The pier is the only part of an opening segment
 # thick enough to sink a pocket into, so it is what sets OPENING_REVEAL above: a pocket
 # needs 4.3 mm of floor at 1:40, i.e. a pier of at least 17.2 cm, and 20 is the first
@@ -527,6 +606,7 @@ DOOR_SWING       ?= true
 OPENING_MAGNETS  ?= 1
 $(foreach t,$(WALL_THICKNESSES),$(foreach w,$(WINDOW_WIDTHS),$(eval $(call part,walls,window,Thickness=$(t);Width=$(w);Reveal=$(OPENING_REVEAL);Height=$(WALL_H);Sill_h=$(WINDOW_SILL_H);Magnets=$(OPENING_MAGNETS),window_$(t)x$(w)))))
 $(foreach t,$(WALL_THICKNESSES),$(foreach w,$(DOOR_WIDTHS),$(foreach h,$(DOOR_HANDS),$(eval $(call part,walls,door,Thickness=$(t);Width=$(w);Reveal=$(OPENING_REVEAL);Height=$(WALL_H);Threshold_h=$(DOOR_THRESHOLD_H);Hand="$(h)";Swing_plate=$(DOOR_SWING);Magnets=$(OPENING_MAGNETS),door_$(t)x$(w)_$(h))))))
+$(foreach t,$(WALL_THICKNESSES),$(foreach w,$(SLIDING_WIDTHS),$(eval $(call part,walls,sliding_door,Thickness=$(t);Width=$(w);Reveal=$(OPENING_REVEAL);Height=$(WALL_H);Threshold_h=$(DOOR_THRESHOLD_H);Panels=$(SLIDING_PANELS);Panel_overlap=$(SLIDING_OVERLAP);Magnets=$(OPENING_MAGNETS),sliding_door_$(t)x$(w)))))
 
 WALLS_STLS := $(STLS_walls)
 WALLS_PNGS := $(WALLS_STLS:.stl=.png)
@@ -543,12 +623,10 @@ walls: $(WALLS_STLS) $(WALLS_PNGS) ## render wall segments, windows + doors -> f
 	@echo ">> rendering $@"
 	@$(OPENSCAD) -o "$@" -D '$(PARAMS)' "$(SRC)"
 
-%.png: | check-openscad check-convert
+%.png: | check-openscad
 	@mkdir -p "$(@D)"
 	@echo ">> rendering preview $@"
-	@$(OPENSCAD) -o "$(@:.png=.raw.png)" $(IMG_OPTS) -D '$(PARAMS)' "$(SRC)"
-	@$(CONVERT) "$(@:.png=.raw.png)" -fuzz 3% -trim +repage -bordercolor '$(IMG_BG)' -border $(IMG_MARGIN) "$@"
-	@rm -f "$(@:.png=.raw.png)"
+	@XDG_CONFIG_HOME="$(SCAD_CONFIG_DIR)" $(OPENSCAD) -o "$@" $(IMG_OPTS) -D '$(PARAMS)' "$(SRC)"
 
 #==========================================================================================
 ##@ Utilities
@@ -631,10 +709,6 @@ FORCE:
 .PHONY: check-openscad
 check-openscad:
 	@command -v $(OPENSCAD) >/dev/null 2>&1 || { echo "❌ '$(OPENSCAD)' not found — install OpenSCAD or set OPENSCAD=<path>"; exit 1; }
-
-.PHONY: check-convert
-check-convert:
-	@command -v $(CONVERT) >/dev/null 2>&1 || { echo "❌ '$(CONVERT)' (ImageMagick) not found — needed for preview images, or set CONVERT=<path>"; exit 1; }
 
 #==========================================================================================
 #  Help
