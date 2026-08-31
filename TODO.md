@@ -165,13 +165,13 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
 - [x] Pool tiles
   low; 200 cm module at 35 cm, Kind = corner / edge / water / steps / round / ladder — four
   corners make the smallest pool; add edges and water for a bigger one, a steps or ladder tile
-  where you get in, a round corner for a curved end. Dappled water carved by a sphere grid; a third magnet at the centre
+  where you get in, a round corner for a curved end. An empty sunken basin (no water surface); a third magnet at the centre
   - scad/pool/pool.scad
   - [ ] More module sizes in the Makefile (150 for a plunge pool; the part takes any Module)
   - [x] A rounded / kidney corner variant (Kind=round), and a ladder-entry tile (Kind=ladder)
-- [x] rework the water: carve spheres instead of raised ripples
-  a shallow water sheet dimpled by a jittered grid of subtracted spheres — the holes combine into a
-  dappled surface that reads as water - scad/pool/pool.scad
+- [x] remove the water from the pool
+  the water surface (raised ripples, then a carved-sphere dapple) was dropped entirely — the tiles
+  are now an empty sunken basin: coping round a bare pool floor - scad/pool/pool.scad
 - [x] make wather waves look less croded
   the rippled water is spaced wider now (Ripple_pitch 17->28 cm) so it reads calmer
 - [x] make pool lather look like a lather, dont use poles

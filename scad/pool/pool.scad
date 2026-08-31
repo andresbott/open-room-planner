@@ -32,9 +32,8 @@
 //
 // It prints the right way up with nothing to support: the water is a recess that opens UPWARD
 // (its walls are vertical, like a real pool wall — no overhang), the coping is solid, the steps
-// and the ladder flight rise as a plain staircase from the floor to the deck, and the water's
-// surface is a shallow raised sheet dappled with spherical dimples — hollows that open upward and
-// slope out like a sink bowl, so they print with no overhang. Like the shower tray, a
+// and the ladder flight rise as a plain staircase from the floor to the deck. The pool is left as
+// an EMPTY BASIN — a bare sunken floor, with no water surface modelled in it. Like the shower tray, a
 // pool is nearly floor level, and its Height is set not by how tall a pool is but by what it
 // takes to sink a visible pan of water ABOVE a magnet pocket — so it is a low tile, clamped to
 // what fits and warning in the render log when the water had to be made shallower (POOL_H).
@@ -83,21 +82,6 @@ Corner_r = 0;
 Ladder_w     = 70;  // cm — the flight width (narrow — a ladder-width entry, not the whole side)
 Ladder_run   = 55;  // cm the treads reach into the pool before the full-depth water
 Ladder_steps = 4;   // treads (rungs) from deck down to the floor
-
-// The water surface: a shallow sheet raised off the pool floor, then DIMPLED by carving a grid of
-// spheres out of its top — each sphere scoops a round hollow, and the hollows together make a
-// dappled, wavy surface that reads as water under a low light instead of as a sheet of glass. They
-// are relief, not ink (a 0.4 mm groove says nothing at 1:40), and they print support-free: the
-// sheet stands well below the coping and every dimple is a hollow that only opens UPWARD, its walls
-// sloping out like the sink bowls — no overhang, and nothing carves below the sheet into the floor.
-Show_waves   = true;
-Wave_amp     = 6;   // cm the water sheet stands above the pool floor (clamped under the water depth)
-Dimple_r      = 34;  // cm — the radius of the sphere that scoops each dimple (large: wide + shallow)
-Dimple_depth  = 4;   // cm each dimple sinks into the sheet (clamped to Wave_amp, never past it)
-Dimple_pitch  = 30;  // cm nominal centre-to-centre of the dimple grid, before it is jittered
-Dimple_jitter = 9;   // cm each dimple is nudged off the grid (and its width varied), so the surface
-                     // reads as water and not as a regular waffle
-Dimple_fn     = 16;  // facets per carving sphere — low, since a shallow cap needs little resolution
 
 // Coping joints: one groove down the middle of each paved rim, parallel to the pool edge, so a
 // big flat band of coping reads as paving and not as a blank wall top. Ink, but the coping is
@@ -156,9 +140,8 @@ module pool() {
             if (Show_joints) coping_joints();
             pool_magnets();
         }
-        // added on top of the solid: the ladder's stair, and the water's ripples
+        // added on top of the solid: the ladder's stair
         if (Kind == "ladder") ladder_treads();
-        if (Show_water && Show_waves) water_texture();
     }
 }
 
@@ -250,64 +233,6 @@ module ladder_treads() {
             translate([cm(-Ladder_w / 2), cm(wy0() + run * k / n), floor_z()])
                 cube([cm(Ladder_w), cm(run / n) + 0.01, top - floor_z() + 0.01]);
         }
-}
-
-// ---- the dappled water surface ----------------------------------------------
-// A shallow water sheet raised off the pool floor and clipped to the wet area (so it never spills
-// onto the coping or the steps/ladder), then DIMPLED: a grid of spheres carved out of its top,
-// each scooping a round hollow. Overlapping, the hollows leave a rippled, dappled surface that
-// reads as water. Only the raised sheet is cut — the dimples never reach below it into the floor.
-module water_texture() {
-    amp = min(rise(Wave_amp), water_dz() * 0.6);   // the sheet's height, well under the rim
-    if (amp > 0.05)
-        difference() {
-            translate([0, 0, floor_z()])
-                linear_extrude(height = amp) flat_water_2d();
-            wave_dimples(amp);
-        }
-}
-
-// The carving spheres: a jittered grid of them over the whole tile (the sheet above trims the
-// result to the water). Each sphere's centre is nudged off its grid point and its radius varied
-// (fixed seeds, so the pattern is stable across renders), so the dimples read as water rather than
-// as a waffle; each is lifted so only its lower cap dips <d> into the sheet — a shallow, wide
-// hollow — and never past the sheet's underside, so the structural floor stays whole.
-module wave_dimples(amp) {
-    d   = min(cm(Dimple_depth), amp);
-    lo  = cm(-Module / 2 - Bleed);
-    hi  = cm( Module / 2 + Bleed);
-    p   = cm(Dimple_pitch);
-    n   = max(1, ceil((hi - lo) / p));
-    jit = cm(Dimple_jitter);
-    cnt = (n + 1) * (n + 1);
-    jx  = rands(-jit, jit, cnt, 12);
-    jy  = rands(-jit, jit, cnt, 34);
-    jr  = rands(0.7, 1.35, cnt, 56);               // vary each dimple's width
-    for (iy = [0 : n])
-        for (ix = [0 : n]) {
-            i  = iy * (n + 1) + ix;
-            R  = cm(Dimple_r) * jr[i];
-            cz = floor_z() + amp - d + R;          // only the bottom cap (depth d) dips into the sheet
-            x  = lo + ix * p + (iy % 2 == 1 ? p / 2 : 0) + jx[i];
-            y  = lo + iy * p + jy[i];
-            translate([x, y, cz]) sphere(r = R, $fn = Dimple_fn);
-        }
-}
-
-// The flat (full-depth) water of a tile, for masking the ripples — everything the steps and the
-// ladder flight are NOT, so no ripple lands on a stair.
-module flat_water_2d() {
-    if (Kind == "round")
-        round_water_2d();
-    else if (Kind == "steps")
-        box_2d(wx0(), wx1(), wy0() + steps_run(), wy1());
-    else if (Kind == "ladder")
-        difference() {
-            box_2d(wx0(), wx1(), wy0(), wy1());
-            box_2d(-Ladder_w / 2, Ladder_w / 2, wy0(), wy0() + ladder_run());
-        }
-    else
-        box_2d(wx0(), wx1(), wy0(), wy1());
 }
 
 // ---- coping and magnets -----------------------------------------------------
