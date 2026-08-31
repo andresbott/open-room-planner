@@ -73,15 +73,23 @@ Steps_run = 55;   // ... and how far into the tile (cm) they reach before the fu
 // square, so a round tile still butts its neighbours.
 Corner_r = 0;
 
-// The pool ladder (Kind = "ladder"): a narrow, multi-tread flight of entry steps in the middle
-// of the -Y edge — the deep-end way in, distinct from the wide `steps` tile (a Roman step across
-// the whole side). It is narrow and has more, shorter treads, so from above its step edges read
-// as a ladder's rungs. No grab rails: a real handrail arches over into a loop, which at 1:40 is
-// a 1 mm spike over open water that will not print (§1.3) — the narrow flight is itself the
-// ladder, and a straight pole standing up out of it read as a bollard, not a rail.
+// The pool ladder (Kind = "ladder"): a narrow, multi-tread flight of entry steps in the middle of
+// the -Y edge — the deep-end way in, distinct from the wide `steps` tile (a Roman step across the
+// whole side) — FLANKED BY TWO HANDRAIL POSTS standing up out of the deck, which is what makes it
+// read as a pool ladder and not a step. The posts are chunky vertical prisms, leaning a little over
+// the water with a rounded top; they are NOT the thin curved tubes of a real ladder — a 1 mm pole
+// arching over the water is a spike that will not print (§1.3), so this is the printable stand-in:
+// two uprights plus the treads, the identifiable shape rather than the real hardware.
 Ladder_w     = 70;  // cm — the flight width (narrow — a ladder-width entry, not the whole side)
 Ladder_run   = 55;  // cm the treads reach into the pool before the full-depth water
 Ladder_steps = 4;   // treads (rungs) from deck down to the floor
+// The ladder's two handrail posts, flanking the flight at the pool edge — the part you see above
+// the water, and what tells the ladder from a step. Chunky vertical prisms (see the header on why
+// they are not thin tubes), leaning Rail_lean over the water and capped with a dome.
+Show_rails = true;
+Rail_h     = 60;  // cm the posts stand above the deck (handrail height)
+Rail_d     = 12;  // cm — the post diameter, chunky enough to print upright without snapping
+Rail_lean  = 18;  // cm the tops lean toward the water (+Y), evoking the ladder's arch (0 = straight)
 
 // Coping joints: one groove down the middle of each paved rim, parallel to the pool edge, so a
 // big flat band of coping reads as paving and not as a blank wall top. Ink, but the coping is
@@ -140,8 +148,11 @@ module pool() {
             if (Show_joints) coping_joints();
             pool_magnets();
         }
-        // added on top of the solid: the ladder's stair
-        if (Kind == "ladder") ladder_treads();
+        // added on top of the solid: the ladder's stair and its two handrail posts
+        if (Kind == "ladder") {
+            ladder_treads();
+            if (Show_rails) ladder_rails();
+        }
     }
 }
 
@@ -233,6 +244,26 @@ module ladder_treads() {
             translate([cm(-Ladder_w / 2), cm(wy0() + run * k / n), floor_z()])
                 cube([cm(Ladder_w), cm(run / n) + 0.01, top - floor_z() + 0.01]);
         }
+}
+
+// The two handrail posts: chunky prisms standing on the coping at the pool edge, flanking the
+// flight, leaning Rail_lean over the water and capped with a dome — built as a hull from a foot
+// buried in the coping up to a sphere at the top, so the lean is a gentle slant (well under 45 deg)
+// that prints support-free and the top comes out round, not cut off. The uprights are what read as
+// a ladder from across the table.
+module ladder_rails() {
+    for (s = [-1, 1]) rail_post(s * Ladder_w / 2);
+}
+
+module rail_post(x) {
+    base_y = wy0() - Rail_d / 2 - 2;      // on the coping, just behind the pool edge (real cm)
+    top_y  = base_y + Rail_lean;          // the top leans toward the water (+Y)
+    hull() {
+        translate([cm(x), cm(base_y), Print_h - rise(4)])
+            cylinder(h = rise(4) + 0.01, d = cm(Rail_d));    // the foot, welded into the coping
+        translate([cm(x), cm(top_y), Print_h + rise(Rail_h)])
+            sphere(d = cm(Rail_d), $fn = 24);                // the rounded top, out over the water
+    }
 }
 
 // ---- coping and magnets -----------------------------------------------------
