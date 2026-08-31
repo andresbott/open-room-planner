@@ -7,10 +7,11 @@
 // is what gives the drain somewhere to sit — sunk into a point it would break
 // out through the sloping wall — and it is what a basin looks like from above.
 //
-// Nothing stands above the top face: the bowl is set back on the counter, leaving
-// the deck a real basin keeps its tap and splashback on, but the tap itself is not
-// modelled. At 1:40 it would be a 1 mm pimple that catches on everything it is
-// stored with, and the counter reads as a washbasin from the bowl alone.
+// A small faucet stands on the deck behind the bowl — a spout and two handle knobs — the same
+// way bathtub.scad models its tap: as VERTICAL PRISMS standing off the deck, never a spout
+// arching over the bowl. A real tap at 1:40 is a 1 mm spike over a hollow that will not print and
+// snaps if it does (§1.3), but a prism up the print direction lands every layer on the one below,
+// so the basin reads unmistakably as a basin — bowl in front, tap behind — and still prints clean.
 //
 // Width/Depth are the real-world footprint in cm. Standard European vanity
 // widths run 40 (cloakroom), 50, 60 (standard single), 80 (roomy single) and
@@ -74,6 +75,17 @@ Drain_h    = 0.5;   // mm, how far it sinks below the floor
 Drain_cone = 0.6;   // its bottom, as a fraction of the top — the sloping sides
                     // catch the light, so the hole reads as a hole
 
+// The faucet on the deck behind each bowl — a spout and two handle knobs, the same vertical
+// prisms bathtub.scad stands on its tap deck (see its header). Real cm: the rises scale like any
+// height, the footprints like any plan dimension. Off -> the plain deck the part used to have.
+Show_tap   = true;
+Tap_h      = 12;  // cm the spout stands above the counter ...
+Tap_w      = 3;   // ... its body this wide across (X) ...
+Tap_reach  = 5;   // ... and this long toward the bowl (Y), so it reads as a spout, not a post
+Handle_h   = 3;   // cm the two handle knobs stand — low, so the spout dominates ...
+Handle_d   = 3;   // ... each this wide ...
+Handle_gap = 12;  // ... the two of them this far apart (X, centre to centre), flanking the spout
+
 // The cabinet, drawn on the FRONT FACE — the one place on this token where the
 // cabinet is actually visible, and the only one with room for it. Looking down on
 // a real vanity you see a counter and a bowl and nothing else; the doors are under
@@ -120,24 +132,55 @@ function bowl_dz(top_z) =
 // take with a wall kept between it and the foot of the sloping side.
 function bowl_floor_min() = min(cm(bowl_w()), cm(bowl_d())) * Bowl_floor_ratio;
 function drain_r() = min(Drain_r, bowl_floor_min() / 2 - Symbol_stroke);
+// The deck behind the bowl has room for the faucet: its reach plus a margin fits between the
+// bowl's back rim and the counter's back edge.
+function tap_fits() = (Depth / 2 - (bowl_cy() + bowl_d() / 2)) >= Tap_reach + 3;
 
 washbasin();
 
 module washbasin() {
-    difference() {
-        footprint(Width, Depth, Print_h);
-        if (Show_basin)
-            for (i = [0 : Basins - 1]) {
-                bowl(bowl_cx(i), bowl_cy(), Print_h);
-                // a hole narrower than the nozzle is not worth cutting
-                if (Show_drain && drain_r() > Symbol_stroke)
-                    drain(bowl_cx(i), bowl_cy(), Print_h);
-            }
-        if (Show_doors)
-            doors(Print_h);
-        if (Magnets > 0)
-            magnets(Width, Depth, Magnets);
+    union() {
+        difference() {
+            footprint(Width, Depth, Print_h);
+            if (Show_basin)
+                for (i = [0 : Basins - 1]) {
+                    bowl(bowl_cx(i), bowl_cy(), Print_h);
+                    // a hole narrower than the nozzle is not worth cutting
+                    if (Show_drain && drain_r() > Symbol_stroke)
+                        drain(bowl_cx(i), bowl_cy(), Print_h);
+                }
+            if (Show_doors)
+                doors(Print_h);
+            if (Magnets > 0)
+                magnets(Width, Depth, Magnets);
+        }
+        if (Show_tap) {
+            if (tap_fits())
+                for (i = [0 : Basins - 1]) tap(bowl_cx(i), Print_h);
+            else
+                echo(str("NOTE: only ", Depth / 2 - (bowl_cy() + bowl_d() / 2),
+                         " cm of deck behind the bowl — too little for the ", Tap_reach,
+                         " cm faucet, left off (give it more depth, or a smaller Bowl_back)"));
+        }
     }
+}
+
+// The faucet, standing on the deck behind a bowl at <cx>: a spout — a stadium vertical prism
+// elongated toward the bowl (−Y), so it reads as a spout and not a post — and two handle knobs
+// flanking it. All stand off the counter as vertical prisms, buried a hair into it so they weld
+// solid; nothing arches over the bowl, so nothing overhangs (see the header). The spout's foot
+// lands on the solid deck behind the bowl, clear of the hollow.
+module tap(cx, top_z) {
+    back_edge = bowl_cy() + bowl_d() / 2;         // the bowl's +Y rim, real cm
+    cy_spout  = back_edge + Tap_reach / 2 + 1;    // just behind the bowl, on the deck
+    gap = min(Handle_gap, per_width() - Handle_d - 2);   // keep both knobs on this bowl's share
+    translate([cm(cx), cm(cy_spout), top_z - rise(2)])
+        linear_extrude(height = rise(Tap_h) + rise(2))
+            hull() for (sy = [-1, 1])
+                translate([0, sy * cm(Tap_reach - Tap_w) / 2]) circle(d = cm(Tap_w));
+    for (s = [-1, 1])
+        translate([cm(cx) + s * cm(gap) / 2, cm(cy_spout), top_z - rise(2)])
+            cylinder(h = rise(Handle_h) + rise(2), d = cm(Handle_d));
 }
 
 // A real dished bowl carved into the top face: an oval rim narrowing to a small
