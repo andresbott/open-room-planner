@@ -1,73 +1,160 @@
-// kidsroom / bunk_bed — two stacked single beds sharing one footprint, with a
-// ladder hint engraved at one end and the mattress size at the other.
+// kidsroom / bunk_bed — two single beds stacked into one frame: a lower mattress deck
+// near the floor, an upper mattress deck above it, and the OPEN sleeping gap between
+// them — which is the whole point of a bunk and the one thing the old token threw away.
 //
-// Width/Length are the real-world footprint in cm: a bunk stands on the same
-// floor space as a single bed, it just carries a second one above it. Height is the
-// real height over the top bunk's guard rail, shrunk by the plan scale like the
-// footprint (see printed_h() in lib/common.scad) — so the token comes out as tall as
-// a wardrobe on a single bed's footprint, which is exactly what a bunk is.
+// It used to be a plain footprint() box with the ladder and the size ENGRAVED ON THE TOP
+// FACE: a labelled brick, exactly what a token must not be (a bunk is unmistakable by its
+// two levels, so it needs no size on it, and a ladder is a thing you climb, not a line
+// drawn on a lid). This models the form instead. The long side of the bed is the FRONT
+// (-Y) face — the side you climb in from and the side a low camera sees — and the two
+// sleeping spaces are cut into it as deep recesses back to a solid panel, the way
+// livingroom/bookshelf.scad carves its shelves: solid end frames left at each side, a
+// back panel left at +Y, a base under the lower bunk, a deck slab between the bunks and a
+// frame rail across the top. The ladder is real relief — recessed rungs cut into the
+// front of the end frame at one end, like pool.scad's Kind=ladder flight — not ink.
+//
+// The under-bunk space is a RECESS in a vertical face, NOT open air: an upper deck left
+// cantilevering over true air would have to bridge the length of the bed. Cut back to the
+// +Y panel it is a short ceiling instead, and every divider is a plain wall.
+//
+// PRINTS ON ITS BACK — the -Y front face laid flat on the bed, like bookshelf.scad. Upright,
+// each deck's underside and the roof of each sleeping gap would be an unsupported overhang;
+// on its back every deck stands as a vertical wall, every gap opens straight up, and nothing
+// bridges. The model itself is authored the right way up (bottom on z = 0, magnet pockets
+// opening down); tip it onto its back in the slicer.
+//
+// Front elevation (-Y face, the side you see), X across, Z up; ladder end at +X:
+//
+//     |======================|####|   the top frame rail (Height is over it) · ladder
+//     |                      |####|   rungs cut into the end frame's front ...
+//     |    upper bunk gap    |####|   ... open sleeping space, recessed to the +Y panel
+//     |______________________|####|
+//     |    upper deck slab    ####|   the upper mattress
+//     |----------------------|    |
+//     |    lower bunk gap     |   |   open sleeping space, the lower mattress at its floor
+//     |______________________|   |
+//     |  base / lower deck (carries the magnets)  |
+//     |__________________________________________|
+//
+// Width/Length are the real single-bed footprint in cm (90 x 200): Length runs along the
+// wall (its long -Y side faces the room), Width is how far it reaches into the room. Height
+// is the real height over the top frame rail, shrunk by the plan scale like the footprint
+// (printed_h() in lib/common.scad), so a bunk stands as tall as a wardrobe on a bed's
+// footprint — which is what a bunk is. The two sleeping gaps share whatever height is left
+// once the base, deck and top rail have taken theirs; if a squashed Height leaves too little
+// they are clamped and the render log says so.
 
 include <../lib/common.scad>
 
-Width  = 90;   // cm — single-bed width
-Length = 200;  // cm — single-bed length
-Height = 165;  // cm — over the top bunk's guard rail
+Width  = 90;   // cm — single-bed width (reaches into the room, +Y is the wall side)
+Length = 200;  // cm — single-bed length (runs along the wall; its -Y side faces the room)
+Height = 165;  // cm — over the top frame rail
 
 // the printed height, mm: Height at the plan scale
 Print_h = printed_h(Height);
 
-Show_ladder = true;
-Show_label  = true;
-// Ladder hint, in real-world cm: two side rails and a few rungs between them,
-// engraved at one end of the piece — where the real ladder climbs to the top
-// bunk.
-Ladder_span  = 70;  // how much of the length the rails run over
-Ladder_inset = 14;  // gap from the end of the piece to the ladder
-Ladder_rungs = 4;   // rungs between the rails, including the two end ones
+Show_gaps   = true;   // the two open sleeping spaces (a plain solid frame without them)
+Show_ladder = true;   // recessed rungs up the front of one end frame
 
-// Magnet pockets in the bottom face, in a row along the length (0 = none). Two
-// keep the piece from pivoting on the board; see Magnet_* in lib/common.scad.
+// The frame, in real cm. The two end frames are full-depth, full-height panels — the corner
+// posts that carry both decks; the ladder lives on the wider one. The back panel is left at
+// +Y so the piece butts a wall and the sleeping gaps have a wall to stop against, not open
+// air. The base is the solid lower deck (the lower mattress and the block that buries the
+// magnets); the deck slab is the upper mattress; the top rail closes the frame.
+End_w      = 14;   // cm — the plain end frame (-X): a solid bed end
+Ladder_end = 40;   // cm — the end frame that carries the ladder (+X), so rungs cut solid
+Back_w     = 8;    // cm — back panel left at +Y
+Base_h     = 30;   // cm — floor to the lower mattress (a solid base, over the magnets)
+Deck_th    = 15;   // cm — the upper deck slab (mattress + frame)
+Top_rail   = 10;   // cm — the top frame rail that closes the frame (Height is over it)
+Gap_ratio  = 0.52; // share of the leftover height the LOWER gap gets (the rest is the upper)
+
+// The ladder, in real cm: a stack of rungs cut into the front (-Y) face of the +X end frame,
+// from a little off the floor up to the upper mattress. It is relief, not a spike — grab
+// rails and round-topped ladders are 1 mm loops over air at 1:40 (see pool.scad), so the
+// rungs ARE the ladder, cut as grooves that print clean whichever way up.
+Ladder_w     = 30;  // cm — the rungs' width (inside the ladder end frame)
+Ladder_depth = 6;   // cm the rungs are recessed into the front face
+Ladder_rungs = 5;   // rungs from the lift up to the top bunk
+Ladder_lift  = 6;   // cm the lowest rung sits off the floor
+
+// Magnet pockets in the bottom face, in a row along the length (0 = none). Two keep the piece
+// from pivoting; the base is the whole footprint, so the row has the run of it (Magnet_* in
+// lib/common.scad). The base keeps Base_h of material over the pockets.
 Magnets = 2;
+
+// ---- the levels the frame divides into, printed mm from the floor -------------
+// The base, the deck slab and the top rail take their real heights; the two sleeping gaps
+// split whatever is left, by Gap_ratio. Working in rise() keeps every share honest under
+// Height_scale, and the leftover can only be positive (the three solid bands are shorter
+// than the whole piece at any scale), so the gaps always get room — thin at a hard squash,
+// which the render warns about.
+function fixed_h()   = rise(Base_h) + rise(Deck_th) + rise(Top_rail);
+function free_h()    = max(0, Print_h - fixed_h());
+function lower_gap() = free_h() * Gap_ratio;
+function upper_gap() = free_h() * (1 - Gap_ratio);
+function z_lmatt()   = rise(Base_h);                 // lower mattress top / lower gap floor
+function z_udeck0()  = z_lmatt() + lower_gap();      // upper deck underside / lower gap roof
+function z_umatt()   = z_udeck0() + rise(Deck_th);   // upper mattress top / upper gap floor
+function z_utop()    = z_umatt() + upper_gap();      // top rail underside / upper gap roof
+// The sleeping width left between the two end frames, real cm (the mattress runs along it).
+function inner_w()   = Length - End_w - Ladder_end;
+// The depth a gap reaches, real cm: the whole width bar the back panel.
+function gap_depth() = Width - Back_w;
 
 bunk_bed();
 
 module bunk_bed() {
-    // the ladder sits Ladder_inset in from the +Y end, Ladder_span long
-    ladder_y = cm(Length) / 2 - cm(Ladder_inset) - cm(Ladder_span) / 2;
+    if (Show_gaps && (inner_w() <= 0 || gap_depth() <= 0))
+        echo(str("WARNING: a ", Length, "x", Width, " cm bunk at 1:", Scale,
+                 " has no room between its ", End_w, "+", Ladder_end,
+                 " cm end frames / behind its ", Back_w,
+                 " cm back panel — sleeping gaps skipped"));
+    else if (Show_gaps && min(lower_gap(), upper_gap()) < Symbol_stroke)
+        echo(str("WARNING: a ", Height, " cm bunk at 1:", Scale, " leaves only ",
+                 rise_cm(free_h()), " cm over its base, deck and top rail for two sleeping",
+                 " gaps — the openings came out too thin and were skipped (give it more:",
+                 " BUNK_BED_H)"));
     difference() {
-        footprint(Width, Length, Print_h);
-        if (Show_ladder)
-            translate([0, ladder_y, 0])
-                ladder(cm(Width) - 2 * Symbol_margin, cm(Ladder_span), Print_h,
-                       rungs = Ladder_rungs);
-        if (Show_label)
-            translate([0, -cm(Length) / 6, 0])
-                label(str(Width, "x", Length), Print_h);
-        if (Magnets > 0)
-            magnets(Width, Length, Magnets);
+        footprint(Length, Width, Print_h);
+        if (Show_gaps && lower_gap() >= Symbol_stroke) gap_cut(z_lmatt(), z_udeck0());
+        if (Show_gaps && upper_gap() >= Symbol_stroke) gap_cut(z_umatt(), z_utop());
+        if (Show_ladder) ladder_cut(rise(Ladder_lift), z_umatt());
+        if (Magnets > 0) magnets(Length, Width, Magnets);
     }
 }
 
-// A ladder cut into the top face — two side rails <w> mm apart, joined by
-// <rungs> rungs over <h> mm of length between them, drawn with the same pen as
-// hanger()/drawers() (stroke_line(), round-ended) and centred on the origin.
-// Follows the custom-detail pattern from lib/common.scad (a shallow cut at
-// Label_depth, translated down from the top face before the 2D strokes are
-// extruded).
-module ladder(w, h, top_z, stroke = Symbol_stroke, depth = Label_depth,
-              rungs = Ladder_rungs) {
-    // the pen is centred on the path, so the paths span one stroke less than
-    // the w x h patch they have to fit in (as in hanger()/drawers())
-    pw = w - stroke;
-    ph = h - stroke;
-    translate([0, 0, top_z - depth])
-        linear_extrude(height = depth + 0.01)
-            union() {
-                for (s = [-1, 1])                        // the two side rails
-                    stroke_line([s * pw / 2, -ph / 2], [s * pw / 2, ph / 2], stroke);
-                for (i = [0 : rungs - 1]) {               // the rungs between them
-                    y = rungs > 1 ? -ph / 2 + i * ph / (rungs - 1) : 0;
-                    stroke_line([-pw / 2, y], [pw / 2, y], stroke);
-                }
-            }
+// One sleeping gap: a slot cut into the front (-Y) face over printed-mm heights <za>..<zb>,
+// spanning the width between the two end frames and reaching back to the +Y panel. Its mouth
+// runs a hair past the front face so it opens clean; its far wall stops Back_w short of the
+// back, so the panel is left whole. A recess in a vertical face — a short ceiling that prints
+// as a wall on its back — never open air (see the header).
+module gap_cut(za, zb) {
+    if (inner_w() > 0 && gap_depth() > 0 && zb - za > 0) {
+        xc      = (End_w - Ladder_end) / 2;              // centre of the inner span, real cm
+        y_front = -cm(Width) / 2 - 0.1;                  // a hair past the front face
+        y_back  =  cm(Width) / 2 - cm(Back_w);           // stop at the back panel
+        translate([cm(xc), (y_front + y_back) / 2, (za + zb) / 2])
+            cube([cm(inner_w()), y_back - y_front, zb - za], center = true);
+    }
+}
+
+// The ladder: <n> rungs cut into the front (-Y) face of the +X end frame, evenly stacked
+// over printed-mm heights <z0>..<z1>, each a groove half the pitch tall so the solid left
+// between them reads as the rung you climb. Clamped to the end frame it sits on, so it can
+// never cut past it into the sleeping gap; a groove finer than the pen is skipped.
+module ladder_cut(z0, z1) {
+    n   = max(1, Ladder_rungs);
+    lw  = min(cm(Ladder_w), cm(Ladder_end) - 2 * Symbol_margin);   // fit inside the frame
+    dep = cm(Ladder_depth);
+    bx  = cm(Length) / 2 - cm(Ladder_end) / 2;          // centre of the ladder end frame
+    pitch = (z1 - z0) / n;
+    gh    = pitch * 0.5;
+    if (lw >= Symbol_stroke && gh >= Symbol_stroke && dep > 0)
+        for (i = [0 : n - 1])
+            translate([bx, -cm(Width) / 2 - 0.1 + (dep + 0.1) / 2, z0 + pitch * (i + 0.5)])
+                cube([lw, dep + 0.1, gh], center = true);
+    else
+        echo(str("NOTE: a ", Ladder_w, " cm ladder at 1:", Scale,
+                 " came out finer than the pen — rungs skipped"));
 }
