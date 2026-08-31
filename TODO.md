@@ -34,11 +34,11 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
 - [x] Bed
   low; 80/90/140/160 x200 cm, a headboard with its field sunk on both faces, pillows and a
   raised duvet with the size engraved on it - scad/bedroom/bed.scad
-  - [/] More sizes: 120x200 (small double), 180x200 (king)
+  - [x] More sizes: 120x200 (small double), 180x200 (king) — in the Makefile BED_SIZES
 - [x] IKEA HEMNES chest of drawers
   med; 108x50 cm, three full-width drawer fronts with two knobs each on the front face -
   scad/bedroom/ikea_hemnes.scad
-  - [/] More sizes: 2-drawer 54x50, 8-drawer 160x50 (the part takes Cols/Drawers)
+  - [x] More sizes: 2-drawer 54x50, 8-drawer 160x50 (Cols/Drawers variants in the Makefile)
 
 ## Living room
 
@@ -52,23 +52,23 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
 - [x] Base-cabinet / worktop run
   med; 120x60 cm, worktop lip + toe kick, one cabinet per 60 cm with two drawer fronts
   up each - scad/kitchen/worktop.scad
-  - [/] More lengths in the Makefile: 80, 100 (60 built as worktop_60; the part takes any Width)
+  - [x] More lengths in the Makefile: 80, 100 (worktop_80 / worktop_100; 60 was worktop_60)
 - [x] Corner base unit
   med; L-shaped 90x90 cm with 60 cm arms, two base_unit bodies at right angles so the slab
   overhangs and the plinth sets back on both faces that look into the room while the two
   open ends stay flush, one door per arm - scad/kitchen/corner_unit.scad
-  - [/] More sizes in the Makefile: 120x120, and an unequal 120x90 (the part takes any
-    Width/Depth/Arm)
+  - [x] More sizes in the Makefile: 120x120, and an unequal 120x90 (corner_unit_120x120 /
+    corner_unit_120x90)
 - [x] Breakfast bar / peninsula
   med; 180x90 cm on the island body with a bar level standing 15 cm above the counter along
   the back edge — a two-level top, and what the bar stool sits at. No knee overhang: a 30 cm
   cantilever at 1:40 cannot be printed - scad/kitchen/breakfast_bar.scad
-  - [/] More lengths in the Makefile: 150, 210, 240 (the part sizes its cabinets off Width)
+  - [x] More lengths in the Makefile: 150, 210, 240 (the part sizes its cabinets off Width)
 - [x] Built-in oven column
   high; 60x60 cm at 200, an oven and a combi microwave stacked in the middle of the column —
   each a case standing flush in a deep shadow gap, with a control fascia and a sunken glass
   door — over and under a plain door - scad/kitchen/oven_column.scad
-  - [/] Single-appliance variant (Micro_h=0) and a warming-drawer one
+  - [x] Single-appliance (oven_column_single, Micro_h=0) and warming-drawer (oven_column_warming) variants
 
 ## Dining
 
@@ -98,25 +98,34 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
 
 ## Hallway / entrance
 
-- [/] Shoe cabinet
-  med; shallow ~100x30 cm
-- [/] Console / hall table
-  med; ~100x35 cm
-- [/] Coat rack / hall tree
-  high; slim footprint ~40x40 cm
-- [/] Bench
-  low; ~100x35 cm
+- [x] Shoe cabinet
+  med; 100x30 cm, three tilt-out flap fronts recessed into the front face over a toe kick
+  (was a box with seams on top) - scad/hallway/shoe_cabinet.scad
+- [x] Console / hall table
+  med; 100x35 cm, a thin proud top slab on four corner legs, open under it -
+  scad/hallway/console.scad
+- [x] Coat rack / hall tree
+  high; 40x40 cm, a slim post on a splayed foot, a knob cap and peg relief up the front
+  (was a box with dots on top) - scad/hallway/coat_rack.scad
+- [x] Bench
+  low; 100x35 cm, a cushioned seat on a leg frame over an open shoe shelf
+  (was a slab with grooves on top) - scad/hallway/bench.scad
 
 ## Kids room
 
-- [/] Bunk bed
-  high; 90x200 footprint on a single bed's floor space, ~165 cm tall so it reads as a bunk
-- [/] Cot / crib
-  low; 60x120 cm
-- [/] Changing table
-  med; ~80x50 cm
-- [/] Cube storage (KALLAX-style)
-  med; 2x2 / 2x4 grid engraved, ~77/147 x39 cm
+- [x] Bunk bed
+  high; 90x200 at 165 cm, two mattressed decks with front/guard rails and a recessed ladder,
+  sleeping gaps cut back to a panel (prints on its back) - scad/kidsroom/bunk_bed.scad
+- [x] Cot / crib
+  low; 60x120 cm, real barred sides cut through both long faces and a sunken mattress well
+  (was a box with bars on top) - scad/kidsroom/cot.scad
+- [x] Changing table
+  med; 80x50 cm, front drawer fronts with knobs under a guarded, dished changing top
+  (was a box with drawers on top) - scad/kidsroom/changing_table.scad
+- [x] Cube storage (KALLAX-style)
+  med; 77x39 cm, real open cube bays cut into the front face (prints on its back)
+  (was a grid engraved on top) - scad/kidsroom/cube_storage.scad
+  - [ ] More sizes in the Makefile: 2x4 147x39 (the part takes Cols/Rows)
 
 ## Laundry / utility
 
@@ -126,23 +135,23 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
   med; 80x80 (Round=true, Diameter=90 for the round one) at 74 cm, a slatted top on four real
   legs with the air of a table under it — printed FACE DOWN, a pocket per foot; square tops on
   corner legs, round ones on four legs round the rim - scad/outdoor/table.scad
-  - [/] Round variant in the Makefile (the part already takes Round=true)
+  - [x] Round variant in the Makefile (table_round_90, Round=true)
 - [x] Outdoor chair / lounger
   low; chair 55x55 at 85 cm with a back and arm cushions; Lounger=true swaps it for a 60x190
   sun lounger whose head end climbs as a real wedge - scad/outdoor/chair.scad
-  - [/] Lounger variant in the Makefile (the part already takes Lounger=true)
+  - [x] Lounger variant in the Makefile (lounger, Lounger=true)
 - [x] Grill / barbecue
   med; 120x60 at 90 cm, a gas BBQ cart — a sunken firebox with a bar grate and a lid hump, a
   side burner on the prep shelf, knob dips and cupboard doors on the front face -
   scad/outdoor/grill.scad
-  - [/] Wider variant in the Makefile (the part sizes its firebox and prep off Width)
+  - [x] Wider variant in the Makefile (grill_160; sizes its firebox and prep off Width)
 
 ## Hobby / gym
 
 - [x] Weight bench
   low; 95x130 at 45 cm, a narrow padded bench on a leg frame beside a stack of weight plates
   (the barbell left off — it does not print at 1:40) - scad/hobby/weight_bench.scad
-  - [/] Incline / adjustable-back variant, and a dumbbell rack
+  - [x] Incline / adjustable-back variant (weight_bench_incline) and a dumbbell rack - scad/hobby/dumbbell_rack.scad
 - [x] Projector screen
   high; 200 and 280 cm wide, a big 16:9 screen recessed into a thin upright panel on a low foot —
   like the TV unit but a bigger screen and a lower base - scad/hobby/projector_screen.scad
