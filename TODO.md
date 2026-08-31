@@ -76,7 +76,7 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
   med; rect 120x80..200x100 and square 70/80/90 on four corner legs with real air under
   the top (printed FACE DOWN, a pocket per foot in diagonal order); round 90-120 on a
   pedestal with a splayed foot - scad/diningroom/table.scad
-  - [ ] Coffee-table variants (same part at TABLE_H=45, setting off) in the Makefile
+  - [x] Coffee tables built as a distinct cube-like part (chunky top + open shelf on a solid base), not a low dining table - scad/livingroom/coffee_table.scad
   - [ ] 70x70 warns its legs leave too little span — decide whether to force Legs=false
     for the smallest square top
 
@@ -151,7 +151,7 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
 - [x] Weight bench
   low; 95x130 at 45 cm, a narrow padded bench on a leg frame beside a stack of weight plates
   (the barbell left off — it does not print at 1:40) - scad/hobby/weight_bench.scad
-  - [x] Incline / adjustable-back variant (weight_bench_incline) and a dumbbell rack - scad/hobby/dumbbell_rack.scad
+  - [x] A dumbbell rack (the incline-bench variant was dropped on review) - scad/hobby/dumbbell_rack.scad
 - [x] Projector screen
   high; 200 and 280 cm wide, a big 16:9 screen recessed into a thin upright panel on a low foot —
   like the TV unit but a bigger screen and a lower base - scad/hobby/projector_screen.scad
@@ -165,10 +165,13 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
 - [x] Pool tiles
   low; 200 cm module at 35 cm, Kind = corner / edge / water / steps / round / ladder — four
   corners make the smallest pool; add edges and water for a bigger one, a steps or ladder tile
-  where you get in, a round corner for a curved end. Rippled water; a third magnet at the centre
+  where you get in, a round corner for a curved end. Dappled water carved by a sphere grid; a third magnet at the centre
   - scad/pool/pool.scad
   - [ ] More module sizes in the Makefile (150 for a plunge pool; the part takes any Module)
   - [x] A rounded / kidney corner variant (Kind=round), and a ladder-entry tile (Kind=ladder)
+- [x] rework the water: carve spheres instead of raised ripples
+  a shallow water sheet dimpled by a jittered grid of subtracted spheres — the holes combine into a
+  dappled surface that reads as water - scad/pool/pool.scad
 - [x] make wather waves look less croded
   the rippled water is spaced wider now (Ripple_pitch 17->28 cm) so it reads calmer
 - [x] make pool lather look like a lather, dont use poles

@@ -230,10 +230,17 @@ ARMCHAIR_SEAT   ?= 42
 TV_UNIT_H       ?= 45
 LR_SIDEBOARD_H  ?= 80
 LR_CONSOLE_H    ?= 80
+COFFEE_TABLE_H  ?= 40
 $(eval $(call part,livingroom,armchair,Height=$(ARMCHAIR_H);Seat=$(ARMCHAIR_SEAT);Magnets=1,armchair))
 $(eval $(call part,livingroom,tv_unit,Height=$(TV_UNIT_H);Magnets=2,tv_unit))
 $(eval $(call part,livingroom,sideboard,Height=$(LR_SIDEBOARD_H);Magnets=2,sideboard))
 $(eval $(call part,livingroom,console,Height=$(LR_CONSOLE_H);Magnets=2,console))
+# -- Coffee tables: a low, chunky "waterfall" cube — a thick top on two solid side slabs, printed
+#    upside down — by top size in cm: a rectangular 100x55, a 70x70 cube and a long 120x60. A
+#    deliberately blocky counterpoint to the leggy dining table (see coffee_table.scad).
+$(eval $(call part,livingroom,coffee_table,Width=100;Depth=55;Height=$(COFFEE_TABLE_H);Magnets=2,coffee_table_100x55))
+$(eval $(call part,livingroom,coffee_table,Width=70;Depth=70;Height=$(COFFEE_TABLE_H);Magnets=2,coffee_table_70x70))
+$(eval $(call part,livingroom,coffee_table,Width=120;Depth=60;Height=$(COFFEE_TABLE_H);Magnets=2,coffee_table_120x60))
 
 # -- Bookshelves: open shelving (BILLY-style), one piece per common width x
 #    height in cm; depth stays 28 (the BILLY carcass). The shelves are a real
