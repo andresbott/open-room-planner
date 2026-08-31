@@ -73,20 +73,20 @@ Steps_run = 55;   // ... and how far into the tile (cm) they reach before the fu
 // square, so a round tile still butts its neighbours.
 Corner_r = 0;
 
-// The pool ladder (Kind = "ladder"): a flat LADDER FRAME standing at the -Y pool edge — two rails
-// joined at the top into an inverted U, with Rungs treads across, descending into the pool. It is
-// the recognisable ladder silhouette — one connected frame, not two separate posts — thin
-// front-to-back like a real ladder and built from rounded flat bars; its feet stand on the pool
-// floor, welding it to the tile. The rungs and the top bar span the narrow gap between the rails as
-// short bridges (about one cm at 1:40) — the one place this part bends §1.3's no-bridge rule, on
-// purpose: a ladder IS open rungs, and at this narrow width the span prints clean. It is the thin
-// CURVED TUBES of a real ladder that genuinely will not print (1 mm spikes over water), not this.
-Ladder_w     = 42;  // cm — the frame's outer width, rail to rail (narrow, a ladder-width entry)
-Ladder_rise  = 60;  // cm the handrail stands above the deck
-Rungs        = 4;   // treads across the frame, up its height so they show above the deck
-Rail_w       = 8;   // cm — each rail's width (and the top bar's thickness) ...
-Rung_w       = 7;   // cm — a tread's thickness ...
-Frame_th     = 9;   // cm — how thick the flat frame is front-to-back (Y), thin like a real ladder
+// The pool ladder (Kind = "ladder"): a LADDER FRAME of round tube standing at the -Y pool edge —
+// two rails joined at the top, with rungs across, that rise from the pool floor and then curve OVER
+// THE POOL BORDER toward the deck, the way a real pool ladder's handrails arch over. It is the
+// recognisable ladder silhouette (one connected frame, not two loose posts), built from THICK round
+// bars so it prints sturdy rather than as thin wire, and kept low. The rungs and the top span the
+// short gap between the rails as short bridges — a ladder is open rungs, and the span is short
+// enough to print clean; the hair-thin curved tubes of a real ladder are the only thing that won't.
+Ladder_w   = 40;  // cm — the frame's outer width, rail to rail (narrow, so it reads as a ladder)
+Bar_w      = 11;  // cm — the rail tube diameter (thick, so it prints sturdy, not a thin wire)
+Rung_w     = 8;   // cm — the rung tube diameter
+Rungs      = 4;   // treads up the straight part, where they show above the deck
+Rail_up    = 28;  // cm the rails rise straight above the deck before curving over
+Arch_rise  = 12;  // cm the curved top adds above that ...
+Arch_over  = 10;  // ... leaning this far toward the deck, out over the pool border
 
 // Coping joints: one groove down the middle of each paved rim, parallel to the pool edge, so a
 // big flat band of coping reads as paving and not as a blank wall top. Ink, but the coping is
@@ -231,34 +231,33 @@ module cut_box(x0, x1, y0, y1, dz) {
 // (a hull of two discs), thin in Y — a cut-out ladder. The rungs and top bar are short bridges (see
 // the header): a ladder is open rungs, and at this narrow width the span prints clean.
 module ladder_frame() {
-    yc    = wy0() + Frame_th / 2 + 3;              // the frame plane: just inside the pool edge
-    z_top = Print_h + rise(Ladder_rise);           // the handrail top
-    z_bot = floor_z();                             // the feet, on the pool floor
-    rx    = Ladder_w / 2 - Rail_w / 2;             // each rail's centre, in from the edge
-    for (s = [-1, 1]) rail_bar(yc, s * rx, z_bot, z_top);   // the two rails
-    rung_bar(yc, z_top, Rail_w);                    // the top bar joining them (the inverted U)
+    yc     = wy0() + Bar_w / 2 + 2;                 // frame plane, just inside the pool edge (cm)
+    z_bot  = floor_z();                             // feet, on the pool floor (printed mm)
+    z_knee = Print_h + rise(Rail_up);               // top of the straight part
+    z_top  = z_knee + rise(Arch_rise);              // the arched handrail top ...
+    y_top  = yc - Arch_over;                        // ... leaned over the pool border, toward -Y
+    rx     = Ladder_w / 2 - Bar_w / 2;             // each rail's centre, in from the edge
+    for (s = [-1, 1]) {
+        tube([s * rx, yc, z_bot],  [s * rx, yc, z_knee], Bar_w);       // the straight rail
+        tube([s * rx, yc, z_knee], [s * rx, y_top, z_top], Bar_w);     // the curve over the border
+    }
+    tube([-rx, y_top, z_top], [rx, y_top, z_top], Bar_w);             // the top handrail bar
+    // the rungs, up the straight part so they show above the deck
     n  = max(1, Rungs);
-    zt = z_top - rise(14);                          // top tread, up near the handrail grip
-    zb = z_bot + rise(5);                           // bottom tread, just off the floor — so the
-                                                    // treads climb the whole frame and show above deck
-    for (k = [0 : n - 1])
-        rung_bar(yc, n > 1 ? zb + (zt - zb) * k / (n - 1) : (zt + zb) / 2, Rung_w);
+    zt = z_knee - rise(4);
+    zb = z_bot + rise(5);
+    for (k = [0 : n - 1]) {
+        z = n > 1 ? zb + (zt - zb) * k / (n - 1) : (zt + zb) / 2;
+        tube([-rx, yc, z], [rx, yc, z], Rung_w);
+    }
 }
 
-// A rail: a rounded flat bar at y = <yc>, from z0 to z1, Rail_w wide (X) and Frame_th thick (Y) —
-// a hull of two discs (cylinders on their side) so the ends come out round.
-module rail_bar(yc, x, z0, z1) {
-    hull() for (z = [z0, z1])
-        translate([cm(x), cm(yc), z]) rotate([90, 0, 0])
-            cylinder(h = cm(Frame_th), r = cm(Rail_w) / 2, center = true, $fn = 20);
-}
-
-// A tread / top bar of thickness <w> across the frame at y = <yc>, height z, spanning the rails.
-module rung_bar(yc, z, w) {
-    inner = Ladder_w / 2 - Rail_w / 2;
-    hull() for (s = [-1, 1])
-        translate([s * cm(inner), cm(yc), z]) rotate([90, 0, 0])
-            cylinder(h = cm(Frame_th), r = cm(w) / 2, center = true, $fn = 20);
+// A round tube of diameter <w> cm between two points, each [x_cm, y_cm, z_printed_mm] — a hull of
+// two spheres, so it runs in any direction (the rails curve out over the border) and stays a clean
+// round bar that prints sturdy.
+module tube(a, b, w) {
+    hull() for (p = [a, b])
+        translate([cm(p[0]), cm(p[1]), p[2]]) sphere(d = cm(w), $fn = 18);
 }
 
 // ---- coping and magnets -----------------------------------------------------

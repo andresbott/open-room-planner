@@ -177,8 +177,8 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
 - [x] make pool lather look like a lather, dont use poles
   dropped the grab-rail posts; the ladder is now a narrow multi-tread flight (rungs), Kind=ladder
 - [x] make the pool ladder read as a pool ladder
-  built as a flat ladder frame — two rails joined at the top with rungs across, the recognisable
-  ladder silhouette (one connected piece, not posts) - scad/pool/pool.scad
+  a thick round-tube frame — two rails + rungs, arching over the pool border like a real handrail
+  (one connected piece, not posts, kept low and sturdy) - scad/pool/pool.scad
 
 # Tools
 
