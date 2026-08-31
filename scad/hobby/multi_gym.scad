@@ -16,7 +16,9 @@
 // tap. Everything prints the right way up with nothing to support: the frame and stack are solid
 // columns rising straight from the floor, the top bar sits ON the frame (carried, not bridged),
 // the plate lines and the frame's field are shallow recesses in vertical faces, and the seat pad
-// is a tapered cushion. The magnet pockets sit under the frame wall — the broad base at the back.
+// is a tapered cushion. A low base beam runs along the floor from the frame out under the seat,
+// tying the seat station back to the frame so the whole machine prints as ONE connected piece.
+// The magnet pockets sit under the frame wall — the broad base at the back.
 //
 // Width/Depth are the real-world footprint in cm — a home multi-gym is about 110 x 95 — and
 // Height its real overall height (a tall frame, ~210 cm), shrunk by the plan scale (see
@@ -67,6 +69,14 @@ Back_w  = 46;   // cm — the backrest board, across ...
 Back_d  = 12;   // ... its thickness ...
 Back_h  = 52;   // ... and how far it rises above the seat
 
+// -- The base -----------------------------------------------------------------
+// A low beam along the floor from the frame out under the seat — a real machine's base rail. It
+// is what ties the seat station back to the frame, so the piece is ONE connected solid and not
+// two: without it the seat would float free in front of the frame (a gap the frame never spans).
+Show_base = true;
+Base_w = 30;  // cm — the base beam, across ...
+Base_h = 14;  // ... and how tall it stands off the floor (low)
+
 // Magnet pockets in the bottom face (0 = none), in a row along the width. They sit under the
 // frame wall — the broad base at the back — so the disc is chosen and placed on the face that
 // really meets the board (see Magnet_* in lib/common.scad). Two keep a wide piece from pivoting.
@@ -94,7 +104,18 @@ module multi_gym() {
             if (Show_plates) plates();
         }
         if (Show_seat) seat_station();
+        if (Show_base) base_beam();
     }
+}
+
+// The base beam: a low bar along the floor from a little inside the frame out under the seat, on
+// the seat's centre line. It overlaps both the frame (at the back) and the seat and backrest (in
+// front), so the seat station is tied to the frame and the machine comes out as one solid piece.
+module base_beam() {
+    y_back  = Depth / 2 - Frame_d + 3;         // a little into the frame wall
+    y_front = Seat_y - Back_d / 2 - Seat_d;    // out to the seat's front edge
+    translate([cm(Seat_x), cm((y_back + y_front) / 2), 0])
+        footprint(Base_w, y_back - y_front, rise(Base_h));
 }
 
 // The frame wall across the back.

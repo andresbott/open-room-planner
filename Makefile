@@ -583,8 +583,6 @@ DUMBBELL_RACK_H ?= 75
 $(eval $(call part,hobby,treadmill,Height=$(TREADMILL_H);Magnets=2,treadmill))
 $(eval $(call part,hobby,multi_gym,Height=$(MULTI_GYM_H);Magnets=2,multi_gym))
 $(eval $(call part,hobby,weight_bench,Height=$(WEIGHT_BENCH_H);Magnets=2,weight_bench))
-# an incline (adjustable-back) bench — the same part with the head end raised as a back rest
-$(eval $(call part,hobby,weight_bench,Incline=true;Height=$(WEIGHT_BENCH_H);Magnets=2,weight_bench_incline))
 # a tiered dumbbell rack — the free-weights corner's other half
 $(eval $(call part,hobby,dumbbell_rack,Height=$(DUMBBELL_RACK_H);Magnets=2,dumbbell_rack))
 # -- Projector screen: a big upright screen on a low foot, one per screen width in cm. HEIGHT is
