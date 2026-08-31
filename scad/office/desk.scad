@@ -32,8 +32,9 @@ Height = 74;   // cm — desk height
 Print_h = printed_h(Height);
 
 // The top slab, in real cm — the only part of the token at full footprint, so its
-// edge is the line you read the size off. Same idea as table.scad.
-Top_h = 4;
+// edge is the line you read the size off. Same idea as table.scad — and, like it, at 8 cm
+// (2 mm printed) it has the body to survive printing face down; 4 cm was a fragile 1 mm sheet.
+Top_h = 8;
 // An end support, in real cm. A real gable is 2-3 cm thick, which is a quarter of a
 // millimetre at 1:40 and nothing a magnet could live in, so the token's support is
 // as wide as the pocket it has to bury — clamped up to that in support_w() — and

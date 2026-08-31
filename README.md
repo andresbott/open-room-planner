@@ -213,8 +213,7 @@ make walls SLIDING_PANELS=3           # three-leaf sliders instead of two
 ## Pool
 
 A swimming pool is built the way a room shell is — from square tiles that **butt flush on a
-fixed module**, assembled into one pool rather than printed in a piece. Four kinds make any
-rectangular pool:
+fixed module**, assembled into one pool rather than printed in a piece. Six kinds make any pool:
 
 | kind | coping (the paved rim) | the rest of the tile |
 |---|---|---|
@@ -222,6 +221,8 @@ rectangular pool:
 | `edge` | one outside edge | water — a side of the pool |
 | `water` | — | water to every edge — an interior tile |
 | `steps` | one outside edge | water that **steps down** from it — the shallow end |
+| `round` | two outside edges, curved | a **rounded corner** — the outer and water edges sweep a quarter circle |
+| `ladder` | one outside edge | a narrow **ladder** flight of entry steps into the water |
 
 The smallest pool is **four corners** — already a full coping ring round four quarters of water.
 A longer one drops `edge` tiles along the sides and `water` tiles in the middle, with a `steps`
@@ -235,13 +236,15 @@ tile where you get in:
 ```
 
 Where two tiles meet, the water runs right to the edge, so it reads as **one continuous sheet**
-while each tile still prints as its own watertight tray. Like a shower tray a pool tile is nearly
-floor level, and its height is set not by how deep a pool is but by what it takes to sink a pan of
-water **above a magnet pocket** — so it is a low tile that clamps the water and says so in the
-render log if it had to (raise `POOL_H`).
+while each tile still prints as its own watertight tray. The surface is **rippled** — low rounded
+swells rather than a glassy plane — and the near-square tile takes a **third magnet at its centre**
+(on top of the two in a row) so a 2 m sheet cannot lift or pivot between its neighbours. Like a
+shower tray a pool tile is nearly floor level, and its height is set not by how deep a pool is but
+by what it takes to sink a pan of water **above a magnet pocket** — so it is a low tile that clamps
+the water and says so in the render log if it had to (raise `POOL_H`).
 
 ```sh
-make pool                     # the four tiles at the 200 cm (2 m) module
+make pool                     # the six tiles at the 200 cm (2 m) module
 make pool POOL_MODULE=150     # a smaller module — a plunge pool
 make pool POOL_H=45           # a deeper pool (more water sunk over the magnet)
 ```

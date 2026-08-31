@@ -32,8 +32,9 @@ Height   = 74;     // cm — garden-table height
 Print_h = printed_h(Height);
 
 // The top slab, in real cm — the only part of the token at full footprint, so its
-// edge is the line you read the size off.
-Top_h = 4;
+// edge is the line you read the size off. At 8 cm (2 mm printed) it has the body to survive
+// printing face down and handling; a 4 cm top came off the bed as a fragile 1 mm sheet.
+Top_h = 8;
 // A leg, in real cm. A real garden-table leg is about 7 cm, which is 1.75 mm at 1:40 and
 // nothing a magnet could live in, so the token's is as wide as the pocket in its foot needs —
 // clamped up to that by slab_leg() in lib/common.scad, the same allowance the dining table and

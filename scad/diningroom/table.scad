@@ -42,8 +42,9 @@ Height   = 75;     // cm — dining-table height (45 for a coffee table)
 Print_h = printed_h(Height);
 
 // The top slab, in real cm — the only part of the token at full footprint, so its edge is
-// the line you read the size off.
-Top_h = 4;
+// the line you read the size off. At 8 cm (2 mm printed) it has the body to survive printing
+// face down and handling; a 4 cm top came off the bed as a fragile 1 mm sheet over the legs.
+Top_h = 8;
 
 // -- four corner legs (a rectangular or square top) ---------------------------
 // false -> the pedestal below instead. A round top always takes the pedestal: four

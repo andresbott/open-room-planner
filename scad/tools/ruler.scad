@@ -89,14 +89,21 @@ module scale_marks() {
 // One engraved number by its tick, in the clear band along the back (+Y) edge. Sized to the
 // gap between two ticks so a long number (a "500") cannot run into its neighbour, and dropped
 // when that falls below the legibility floor rather than printed as a blob (cf. wall_label()).
+// The number sits just to the right of its tick, but its centre is CLAMPED so the whole number
+// stays on the bar — without that the last number (at the right end) runs off the end and the
+// engraving, with no material past the end to cut into, comes out sliced in half.
 module number(x, d, is_maj) {
     w    = cm(Width);
     txt  = str(d);
     room = cm(is_maj ? Major : Minor) - Symbol_margin;   // along the bar, between ticks
     band = (1 - Major_frac) * w - Symbol_margin;         // across it, the clear back strip
     size = label_size(room, band, txt);
+    half = 0.35 * size * len(txt);                       // the number's half-width (0.7*size/digit)
+    cx   = x + cm(Minor) / 8;                            // just right of the tick ...
+    cxc  = max(-cm(Length) / 2 + Symbol_margin + half,   // ... but kept clear of either end,
+               min(cm(Length) / 2 - Symbol_margin - half, cx));   // so it is never sliced off
     if (size >= Symbol_min)
-        translate([x + cm(Minor) / 8, w / 2 - band / 2 - Symbol_margin / 2, Print_h - Num_depth])
+        translate([cxc, w / 2 - band / 2 - Symbol_margin / 2, Print_h - Num_depth])
             linear_extrude(height = Num_depth + 0.01)
                 text(txt, size = size, halign = "center", valign = "center",
                      font = "DejaVu Sans");

@@ -555,6 +555,12 @@ WEIGHT_BENCH_H ?= 45
 $(eval $(call part,hobby,treadmill,Height=$(TREADMILL_H);Magnets=2,treadmill))
 $(eval $(call part,hobby,multi_gym,Height=$(MULTI_GYM_H);Magnets=2,multi_gym))
 $(eval $(call part,hobby,weight_bench,Height=$(WEIGHT_BENCH_H);Magnets=2,weight_bench))
+# -- Projector screen: a big upright screen on a low foot, one per screen width in cm. HEIGHT is
+#    the foot height only; the screen board stands its own 16:9 height above it (see the .scad).
+PROJECTOR_SCREEN_WIDTHS  := 200 280
+PROJECTOR_SCREEN_H       ?= 16
+PROJECTOR_SCREEN_MAGNETS ?= 2
+$(foreach w,$(PROJECTOR_SCREEN_WIDTHS),$(eval $(call part,hobby,projector_screen,Width=$(w);Height=$(PROJECTOR_SCREEN_H);Magnets=$(PROJECTOR_SCREEN_MAGNETS),projector_screen_$(w))))
 
 HOBBY_STLS := $(STLS_hobby)
 HOBBY_PNGS := $(HOBBY_STLS:.stl=.png)
@@ -644,19 +650,22 @@ walls: $(WALLS_STLS) $(WALLS_PNGS) ## render wall segments, windows + doors -> f
 
 # ---- Pool --------------------------------------------------------------------
 # A swimming pool built from composable tiles that butt flush on a fixed module, the way the
-# walls build a room shell (see pool/pool.scad). Four Kinds — corner, edge, water and steps —
-# lay out to any rectangular pool: a coping ring round a continuous sheet of water. The smallest
+# walls build a room shell (see pool/pool.scad). Six Kinds — corner, edge, water, steps, round
+# and ladder — lay out to any pool: a coping ring round a continuous sheet of water. The smallest
 # pool is four corners; add edges along the sides and water tiles in the middle for a bigger one,
-# and a steps tile for the shallow end. Turn a corner/edge in the plan to face its coping out.
-# A tile is a low near-floor piece (like a shower tray) — POOL_H is set by burying a magnet under
-# the water, not by how tall a pool is. POOL_MODULE is the tile side (200 = a 2 m square).
+# a steps or ladder tile where you get in, and a round corner for a curved end. Turn a corner/edge
+# in the plan to face its coping out. A tile is a low near-floor piece (like a shower tray) —
+# POOL_H is set by burying a magnet under the water, not by how tall a pool is; the water surface
+# is rippled and the near-square tile takes a third magnet at its centre (POOL_CENTRE_MAGNET).
+# POOL_MODULE is the tile side (200 = a 2 m square).
 POOL_DIR := $(FILES_DIR)/pool
 POOL_MODULE  ?= 200
 POOL_H       ?= 35
 POOL_COPING  ?= 30
-POOL_KINDS   := corner edge water steps
+POOL_KINDS   := corner edge water steps round ladder
 POOL_MAGNETS ?= 2
-$(foreach k,$(POOL_KINDS),$(eval $(call part,pool,pool,Kind="$(k)";Module=$(POOL_MODULE);Height=$(POOL_H);Coping=$(POOL_COPING);Magnets=$(POOL_MAGNETS),$(k))))
+POOL_CENTRE_MAGNET ?= true
+$(foreach k,$(POOL_KINDS),$(eval $(call part,pool,pool,Kind="$(k)";Module=$(POOL_MODULE);Height=$(POOL_H);Coping=$(POOL_COPING);Magnets=$(POOL_MAGNETS);Centre_magnet=$(POOL_CENTRE_MAGNET),$(k))))
 
 POOL_STLS := $(STLS_pool)
 POOL_PNGS := $(POOL_STLS:.stl=.png)
