@@ -1,7 +1,8 @@
 // tools / ruler — a measuring stick for the plan itself, not a piece of furniture: a low
 // flat bar carrying a scale, so you can lay it across the board and read how much real room
 // a run of pieces takes without doing the 1:40 arithmetic in your head. A tick every 50 cm,
-// a longer tick and an engraved number every 100 cm, with a "0" at the left end.
+// a longer tick and an engraved number every 100 cm, with a "0" at the left end — and over the
+// first 100 cm, a finer tick every 10 cm, like the detailed end of a tape measure.
 //
 // The one thing that makes it work is that the marks are drawn through cm(), the same
 // real-cm -> printed-mm conversion every part uses (see lib/common.scad): a 100 cm tick sits
@@ -37,10 +38,18 @@ Major = 100;   // ... and between the long, numbered ones
 // as cleanly as a tape measure; -D Label_minor=true when you want every mark called out.
 Label_minor = false;
 
+// The first Fine_span cm also carries a finer graduation — a short tick every Fine cm — so the
+// start of the ruler reads like the detailed end of a tape measure while the rest stays a clean
+// run of 50s. The fine ticks are shorter than the 50 cm ticks and skip where a 50/100 tick already
+// falls, so they read as a subdivision and not a clash.
+Fine      = 10;   // cm between the fine ticks in the first section (0 = no fine graduation)
+Fine_span = 100;  // cm from the 0 end that carries the fine ticks
+
 // Tick geometry, as fractions of the bar so it holds at any Width. A tick rises from the front
 // (-Y) edge; the numbers sit in the clear band along the back (+Y) edge above the short ticks.
 Minor_frac = 0.30;  // how far a short tick reaches across the bar ...
 Major_frac = 0.50;  // ... and a long one, leaving the back half clear for the numbers
+Fine_frac  = 0.18;  // ... and a fine (10 cm) tick, shorter still so the hierarchy reads
 Tick_depth = 0.4;   // printed mm a tick is cut into the top face (one nozzle, like a symbol)
 Num_depth  = 0.4;   // ... and a number
 
@@ -76,14 +85,25 @@ module scale_marks() {
     n      = floor(Length / Minor);           // how many Minor steps fit along it
     for (i = [0 : n]) {
         d       = i * Minor;                  // real cm this mark stands for
-        x       = x0 + cm(d);
         is_maj  = (d % Major == 0);
-        reach   = (is_maj ? Major_frac : Minor_frac) * w;
-        // the tick: a one-nozzle slot rising from the front (-Y) edge across `reach` of the bar
-        translate([x - Symbol_stroke / 2, -w / 2, Print_h - Tick_depth])
-            cube([Symbol_stroke, reach, Tick_depth + 0.01]);
-        if (is_maj || Label_minor) number(x, d, is_maj);
+        tick(x0 + cm(d), (is_maj ? Major_frac : Minor_frac) * w);
+        if (is_maj || Label_minor) number(x0 + cm(d), d, is_maj);
     }
+    // the fine graduation over the first Fine_span cm: a short tick every Fine cm, skipping the
+    // 50/100 marks already cut, so the start of the ruler reads finely divided
+    if (Fine > 0)
+        for (i = [0 : floor(min(Fine_span, Length) / Fine)]) {
+            d = i * Fine;
+            if (d % Minor != 0)
+                tick(x0 + cm(d), Fine_frac * w);
+        }
+}
+
+// One tick: a one-nozzle slot rising from the front (-Y) edge across <reach> of the bar's width,
+// cut Tick_depth into the top face.
+module tick(x, reach) {
+    translate([x - Symbol_stroke / 2, -cm(Width) / 2, Print_h - Tick_depth])
+        cube([Symbol_stroke, reach, Tick_depth + 0.01]);
 }
 
 // One engraved number by its tick, in the clear band along the back (+Y) edge. Sized to the
