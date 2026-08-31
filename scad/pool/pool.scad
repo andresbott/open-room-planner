@@ -73,23 +73,20 @@ Steps_run = 55;   // ... and how far into the tile (cm) they reach before the fu
 // square, so a round tile still butts its neighbours.
 Corner_r = 0;
 
-// The pool ladder (Kind = "ladder"): a narrow, multi-tread flight of entry steps in the middle of
-// the -Y edge — the deep-end way in, distinct from the wide `steps` tile (a Roman step across the
-// whole side) — FLANKED BY TWO HANDRAIL POSTS standing up out of the deck, which is what makes it
-// read as a pool ladder and not a step. The posts are chunky vertical prisms, leaning a little over
-// the water with a rounded top; they are NOT the thin curved tubes of a real ladder — a 1 mm pole
-// arching over the water is a spike that will not print (§1.3), so this is the printable stand-in:
-// two uprights plus the treads, the identifiable shape rather than the real hardware.
-Ladder_w     = 70;  // cm — the flight width (narrow — a ladder-width entry, not the whole side)
-Ladder_run   = 55;  // cm the treads reach into the pool before the full-depth water
-Ladder_steps = 4;   // treads (rungs) from deck down to the floor
-// The ladder's two handrail posts, flanking the flight at the pool edge — the part you see above
-// the water, and what tells the ladder from a step. Chunky vertical prisms (see the header on why
-// they are not thin tubes), leaning Rail_lean over the water and capped with a dome.
-Show_rails = true;
-Rail_h     = 60;  // cm the posts stand above the deck (handrail height)
-Rail_d     = 12;  // cm — the post diameter, chunky enough to print upright without snapping
-Rail_lean  = 18;  // cm the tops lean toward the water (+Y), evoking the ladder's arch (0 = straight)
+// The pool ladder (Kind = "ladder"): a flat LADDER FRAME standing at the -Y pool edge — two rails
+// joined at the top into an inverted U, with Rungs treads across, descending into the pool. It is
+// the recognisable ladder silhouette — one connected frame, not two separate posts — thin
+// front-to-back like a real ladder and built from rounded flat bars; its feet stand on the pool
+// floor, welding it to the tile. The rungs and the top bar span the narrow gap between the rails as
+// short bridges (about one cm at 1:40) — the one place this part bends §1.3's no-bridge rule, on
+// purpose: a ladder IS open rungs, and at this narrow width the span prints clean. It is the thin
+// CURVED TUBES of a real ladder that genuinely will not print (1 mm spikes over water), not this.
+Ladder_w     = 42;  // cm — the frame's outer width, rail to rail (narrow, a ladder-width entry)
+Ladder_rise  = 60;  // cm the handrail stands above the deck
+Rungs        = 4;   // treads across the frame, up its height so they show above the deck
+Rail_w       = 8;   // cm — each rail's width (and the top bar's thickness) ...
+Rung_w       = 7;   // cm — a tread's thickness ...
+Frame_th     = 9;   // cm — how thick the flat frame is front-to-back (Y), thin like a real ladder
 
 // Coping joints: one groove down the middle of each paved rim, parallel to the pool edge, so a
 // big flat band of coping reads as paving and not as a blank wall top. Ink, but the coping is
@@ -126,7 +123,6 @@ function water_dz()    = max(0, min(rise(Water_depth),
                                     Print_h - water_under() - Water_floor));
 // The step run, clamped so it cannot reach past the water it is cut into.
 function steps_run()   = min(Steps_run, wy1() - wy0());
-function ladder_run()  = min(Ladder_run, wy1() - wy0());
 function floor_z()     = Print_h - water_dz();   // the flat pool floor, printed mm
 
 // The rounded corner's outer radius (real cm), clamped so it leaves a full-width coping (a water
@@ -148,11 +144,8 @@ module pool() {
             if (Show_joints) coping_joints();
             pool_magnets();
         }
-        // added on top of the solid: the ladder's stair and its two handrail posts
-        if (Kind == "ladder") {
-            ladder_treads();
-            if (Show_rails) ladder_rails();
-        }
+        // added on top of the solid: the ladder frame
+        if (Kind == "ladder") ladder_frame();
     }
 }
 
@@ -192,7 +185,7 @@ module box_2d(x0, x1, y0, y1) {
 // The water: one downward recess for a flat pool floor, the `round` tile's rounded region, or —
 // for `steps` — a flight near the -Y coping (each tread cut a little deeper than the last)
 // giving way to full-depth water beyond it. The `ladder` tile cuts full-depth water like an
-// edge and gets its narrow stair added back on top (ladder_treads).
+// edge and gets its ladder frame added back on top (ladder_frame).
 module water_cut() {
     if (Kind == "steps" && steps_run() > 0) {
         n   = max(1, Steps);
@@ -231,39 +224,41 @@ module cut_box(x0, x1, y0, y1, dz) {
 }
 
 // ---- the ladder -------------------------------------------------------------
-// A narrow flight of solid treads added back into the full-depth water near the -Y coping: each
-// tread a box from the pool floor up to its own height, one step lower than the last, so the
-// flight descends from the deck into the water. Deep water is left on both sides and beyond it,
-// which is what makes it read as a ladder into the pool and not a Roman step across it.
-module ladder_treads() {
-    n   = max(1, Ladder_steps);
-    run = ladder_run();
-    if (run > 0)
-        for (k = [0 : n - 1]) {
-            top = Print_h - water_dz() * (k + 1) / n;   // tread k's surface, printed mm
-            translate([cm(-Ladder_w / 2), cm(wy0() + run * k / n), floor_z()])
-                cube([cm(Ladder_w), cm(run / n) + 0.01, top - floor_z() + 0.01]);
-        }
+// A flat ladder frame standing at the -Y pool edge: two rails from the pool floor up past the deck,
+// joined at the top by a bar (an inverted U, so it reads as one frame and not two posts), with
+// Rungs treads down the submerged part. Its feet stand on the pool floor, welding it to the tile;
+// it stands a little clear of the wall so the whole silhouette shows. Built from rounded flat bars
+// (a hull of two discs), thin in Y — a cut-out ladder. The rungs and top bar are short bridges (see
+// the header): a ladder is open rungs, and at this narrow width the span prints clean.
+module ladder_frame() {
+    yc    = wy0() + Frame_th / 2 + 3;              // the frame plane: just inside the pool edge
+    z_top = Print_h + rise(Ladder_rise);           // the handrail top
+    z_bot = floor_z();                             // the feet, on the pool floor
+    rx    = Ladder_w / 2 - Rail_w / 2;             // each rail's centre, in from the edge
+    for (s = [-1, 1]) rail_bar(yc, s * rx, z_bot, z_top);   // the two rails
+    rung_bar(yc, z_top, Rail_w);                    // the top bar joining them (the inverted U)
+    n  = max(1, Rungs);
+    zt = z_top - rise(14);                          // top tread, up near the handrail grip
+    zb = z_bot + rise(5);                           // bottom tread, just off the floor — so the
+                                                    // treads climb the whole frame and show above deck
+    for (k = [0 : n - 1])
+        rung_bar(yc, n > 1 ? zb + (zt - zb) * k / (n - 1) : (zt + zb) / 2, Rung_w);
 }
 
-// The two handrail posts: chunky prisms standing on the coping at the pool edge, flanking the
-// flight, leaning Rail_lean over the water and capped with a dome — built as a hull from a foot
-// buried in the coping up to a sphere at the top, so the lean is a gentle slant (well under 45 deg)
-// that prints support-free and the top comes out round, not cut off. The uprights are what read as
-// a ladder from across the table.
-module ladder_rails() {
-    for (s = [-1, 1]) rail_post(s * Ladder_w / 2);
+// A rail: a rounded flat bar at y = <yc>, from z0 to z1, Rail_w wide (X) and Frame_th thick (Y) —
+// a hull of two discs (cylinders on their side) so the ends come out round.
+module rail_bar(yc, x, z0, z1) {
+    hull() for (z = [z0, z1])
+        translate([cm(x), cm(yc), z]) rotate([90, 0, 0])
+            cylinder(h = cm(Frame_th), r = cm(Rail_w) / 2, center = true, $fn = 20);
 }
 
-module rail_post(x) {
-    base_y = wy0() - Rail_d / 2 - 2;      // on the coping, just behind the pool edge (real cm)
-    top_y  = base_y + Rail_lean;          // the top leans toward the water (+Y)
-    hull() {
-        translate([cm(x), cm(base_y), Print_h - rise(4)])
-            cylinder(h = rise(4) + 0.01, d = cm(Rail_d));    // the foot, welded into the coping
-        translate([cm(x), cm(top_y), Print_h + rise(Rail_h)])
-            sphere(d = cm(Rail_d), $fn = 24);                // the rounded top, out over the water
-    }
+// A tread / top bar of thickness <w> across the frame at y = <yc>, height z, spanning the rails.
+module rung_bar(yc, z, w) {
+    inner = Ladder_w / 2 - Rail_w / 2;
+    hull() for (s = [-1, 1])
+        translate([s * cm(inner), cm(yc), z]) rotate([90, 0, 0])
+            cylinder(h = cm(Frame_th), r = cm(w) / 2, center = true, $fn = 20);
 }
 
 // ---- coping and magnets -----------------------------------------------------
