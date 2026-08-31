@@ -13,6 +13,9 @@
 // to support; the bench is a solid leg frame under a tapered seat pad. Magnet pockets go under
 // the bench frame — its broad floor.
 //
+// Incline=true raises the head end of the pad as a ramped back rest — the adjustable bench — a
+// solid wedge climbing toward +Y, so its top face is the overhang and it still prints support-free.
+//
 // Width/Depth are the real-world footprint in cm — the bench and the plates side by side, about
 // 95 x 130 — and Height the bench's real seat height (~45 cm), shrunk by the plan scale (see
 // printed_h() in lib/common.scad); the plate stack stands its own real height beside it.
@@ -33,6 +36,11 @@ Bench_x   = -24;  // cm left of centre the bench sits, leaving the right for the
 Leg       = 8;    // cm — a corner leg of the frame ...
 Leg_rail  = 3;    // ... and how far the rail is set back behind it
 Pad       = 6;    // cm — the seat pad standing proud of the frame top
+
+// -- Incline back (an adjustable bench) ---------------------------------------
+Incline   = false;  // true -> the head end climbs as a back rest
+Back_frac = 0.4;    // the share of the pad length the raised back takes, at the +Y head end
+Back_rise = 24;     // cm the back climbs above the seat pad at the head
 
 // -- The plate stack ----------------------------------------------------------
 Show_plates = true;
@@ -64,8 +72,24 @@ module weight_bench() {
         // the seat pad, on top of the frame
         translate([cm(Bench_x), 0, 0])
             cushion(Bench_w - 4, Bench_l - 8, Print_h, Pad);
+        if (Incline) incline_back();
         if (Show_plates) plate_stack();
     }
+}
+
+// The raised back rest of an incline bench: the head-end (+Y) share of the pad ramped up from
+// seat height to Back_rise, built as a hull of two cushion() slices so it self-tapers like the
+// seat and comes out a solid wedge — the top face rises toward the head, so nothing overhangs.
+module incline_back() {
+    bw = Bench_w - 4;
+    bl = Bench_l - 8;
+    y_lo = cm(bl) / 2 - cm(bl * Back_frac);  // where the ramp leaves the flat pad
+    y_hi = cm(bl) / 2 - cm(3);               // the head end
+    translate([cm(Bench_x), 0, 0])
+        hull() {
+            translate([0, y_lo, 0]) cushion(bw, 6, Print_h, Pad);
+            translate([0, y_hi, 0]) cushion(bw, 6, Print_h, Pad + Back_rise);
+        }
 }
 
 // The plate stack: solid discs parted by narrower spacer discs, so the gaps between plates show.

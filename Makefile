@@ -96,7 +96,7 @@ BEDROOM_DIR  := $(FILES_DIR)/bedroom
 
 # -- Beds: one piece per mattress size, in cm (IKEA naming). Height is the top of
 #    the mattress — one of the lowest pieces of the set.
-BED_SIZES := 80x200 90x200 140x200 160x200
+BED_SIZES := 80x200 90x200 120x200 140x200 160x200 180x200
 BED_H     ?= 50
 # magnet pockets per bed, in a row along the length (0 = none)
 BED_MAGNETS ?= 2
@@ -125,6 +125,11 @@ HEMNES_H     ?= 96
 # magnet pockets per chest, in a row along the width (0 = none)
 HEMNES_MAGNETS ?= 2
 $(foreach s,$(HEMNES_SIZES),$(eval $(call part,bedroom,ikea_hemnes,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(HEMNES_H);Magnets=$(HEMNES_MAGNETS),ikea_hemnes_$(s))))
+# The narrow 2-drawer chest (54x50, one column of two, a lower 66 cm carcass) and the wide
+# 8-drawer one (160x50, two columns of four at the 96 cm carcass) — the same part, Cols and
+# Drawers driving how many fronts it carries (see ikea_hemnes.scad).
+$(eval $(call part,bedroom,ikea_hemnes,Width=54;Depth=50;Height=66;Cols=1;Drawers=2;Magnets=1,ikea_hemnes_54x50))
+$(eval $(call part,bedroom,ikea_hemnes,Width=160;Depth=50;Height=$(HEMNES_H);Cols=2;Drawers=4;Magnets=2,ikea_hemnes_160x50))
 
 # -- Bed-end benches: one piece per common width, in cm — 100/120 for a single or
 #    small double, 140/160 to span a queen/king footboard. Depth stays 40 (a
@@ -269,6 +274,9 @@ $(eval $(call part,kitchen,worktop,Height=$(WORKTOP_H);Magnets=2,worktop))
 # a short run the width of the dishwasher (60 cm), to sit beside it or fill a gap; near
 # square, so one central pocket like the other 60 cm units rather than the long run's two
 $(eval $(call part,kitchen,worktop,Width=60;Height=$(WORKTOP_H);Magnets=1,worktop_60))
+# the in-between run lengths — 80 and 100 cm — the part sizes its cabinets off Width
+$(eval $(call part,kitchen,worktop,Width=80;Height=$(WORKTOP_H);Magnets=2,worktop_80))
+$(eval $(call part,kitchen,worktop,Width=100;Height=$(WORKTOP_H);Magnets=2,worktop_100))
 $(eval $(call part,kitchen,island,Height=$(ISLAND_H);Magnets=2,island))
 $(eval $(call part,kitchen,sink,Height=$(SINK_H);Magnets=2,sink))
 $(eval $(call part,kitchen,cooker,Height=$(COOKER_H);Magnets=1,cooker))
@@ -282,8 +290,20 @@ $(eval $(call part,kitchen,fridge,Height=$(FRIDGE_H);Magnets=1,fridge))
 # what stops an L pivoting (see Magnets in corner_unit.scad, where 1 and 3 mean other
 # layouts rather than fewer pockets in a row).
 $(eval $(call part,kitchen,corner_unit,Height=$(CORNER_UNIT_H);Magnets=2,corner_unit))
+# a bigger square corner (120x120, a 60x60 notch) and an unequal one (120x90) — the part
+# takes any Width/Depth/Arm (see corner_unit.scad)
+$(eval $(call part,kitchen,corner_unit,Width=120;Depth=120;Height=$(CORNER_UNIT_H);Magnets=2,corner_unit_120x120))
+$(eval $(call part,kitchen,corner_unit,Width=120;Depth=90;Height=$(CORNER_UNIT_H);Magnets=2,corner_unit_120x90))
 $(eval $(call part,kitchen,breakfast_bar,Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar))
+# more peninsula lengths — the part sizes its cabinets off Width (150 short, 210/240 long)
+$(eval $(call part,kitchen,breakfast_bar,Width=150;Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar_150))
+$(eval $(call part,kitchen,breakfast_bar,Width=210;Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar_210))
+$(eval $(call part,kitchen,breakfast_bar,Width=240;Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar_240))
 $(eval $(call part,kitchen,oven_column,Height=$(OVEN_COLUMN_H);Magnets=1,oven_column))
+# a single-oven column (no microwave) and a single oven over a warming drawer — the same
+# housing, Micro_h=0 dropping the microwave and Warming_h adding the drawer (see oven_column.scad)
+$(eval $(call part,kitchen,oven_column,Micro_h=0;Height=$(OVEN_COLUMN_H);Magnets=1,oven_column_single))
+$(eval $(call part,kitchen,oven_column,Micro_h=0;Warming_h=14;Height=$(OVEN_COLUMN_H);Magnets=1,oven_column_warming))
 
 KITCHEN_STLS := $(STLS_kitchen)
 KITCHEN_PNGS := $(KITCHEN_STLS:.stl=.png)
@@ -527,12 +547,19 @@ FIRE_PIT_H     ?= 45
 # corner to opposite corner, are what stop a legged top tilting or pivoting
 OD_TABLE_MAGNETS ?= 2
 $(eval $(call part,outdoor,table,Height=$(OD_TABLE_H);Magnets=$(OD_TABLE_MAGNETS),table))
+# the round garden table (Diameter=90) — four legs round the rim, the part takes Round=true
+$(eval $(call part,outdoor,table,Round=true;Diameter=90;Height=$(OD_TABLE_H);Magnets=$(OD_TABLE_MAGNETS),table_round_90))
 $(eval $(call part,outdoor,chair,Height=$(OD_CHAIR_H);Seat=$(OD_CHAIR_SEAT);Magnets=1,chair))
+# the sun lounger (a long 60x190 recliner) — the same part takes Lounger=true; two pockets
+# along its length, like a bed, keep the long piece from pivoting
+$(eval $(call part,outdoor,chair,Lounger=true;Height=$(OD_CHAIR_H);Seat=$(OD_CHAIR_SEAT);Magnets=2,lounger))
 $(eval $(call part,outdoor,sofa,Height=$(OD_SOFA_H);Seat=$(OD_SOFA_SEAT);Magnets=2,sofa))
 $(eval $(call part,outdoor,planter,Height=$(PLANTER_H);Magnets=1,planter))
 # A gas barbecue on a cart — a firebox with a bar grate and a lid hump, a side burner, and the
 # controls + cupboard on the front. Two pockets, in the plinth like the kitchen run.
 $(eval $(call part,outdoor,grill,Height=$(GRILL_H);Magnets=2,grill))
+# a wider 6-burner cart (160 cm) — the part sizes its firebox and prep shelf off Width
+$(eval $(call part,outdoor,grill,Width=160;Height=$(GRILL_H);Magnets=2,grill_160))
 # A wood-burning fire pit — a tapered bowl with a log stack in it; round, plus a square variant.
 $(eval $(call part,outdoor,fire_pit,Height=$(FIRE_PIT_H);Magnets=1,fire_pit))
 $(eval $(call part,outdoor,fire_pit,Round=false;Height=$(FIRE_PIT_H);Magnets=1,fire_pit_square))
@@ -549,12 +576,17 @@ outdoor: $(OUTDOOR_STLS) $(OUTDOOR_PNGS) ## render outdoor parts + previews -> f
 # frames — the treadmill's belt and console, the multi-gym's plate stack, the bench's stacked
 # plates — not by cables or bars, which do not print at 1:40 (see the .scad headers).
 HOBBY_DIR := $(FILES_DIR)/hobby
-TREADMILL_H    ?= 18
-MULTI_GYM_H    ?= 210
-WEIGHT_BENCH_H ?= 45
+TREADMILL_H     ?= 18
+MULTI_GYM_H     ?= 210
+WEIGHT_BENCH_H  ?= 45
+DUMBBELL_RACK_H ?= 75
 $(eval $(call part,hobby,treadmill,Height=$(TREADMILL_H);Magnets=2,treadmill))
 $(eval $(call part,hobby,multi_gym,Height=$(MULTI_GYM_H);Magnets=2,multi_gym))
 $(eval $(call part,hobby,weight_bench,Height=$(WEIGHT_BENCH_H);Magnets=2,weight_bench))
+# an incline (adjustable-back) bench — the same part with the head end raised as a back rest
+$(eval $(call part,hobby,weight_bench,Incline=true;Height=$(WEIGHT_BENCH_H);Magnets=2,weight_bench_incline))
+# a tiered dumbbell rack — the free-weights corner's other half
+$(eval $(call part,hobby,dumbbell_rack,Height=$(DUMBBELL_RACK_H);Magnets=2,dumbbell_rack))
 # -- Projector screen: a big upright screen on a low foot, one per screen width in cm. HEIGHT is
 #    the foot height only; the screen board stands its own 16:9 height above it (see the .scad).
 PROJECTOR_SCREEN_WIDTHS  := 200 280

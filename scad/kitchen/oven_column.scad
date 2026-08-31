@@ -37,6 +37,11 @@
 // case starts — the thing that actually decides whether the column reads as eye-level — and
 // Oven_h / Micro_h are the two appliances' own case heights, all in real cm.
 //
+// Two variants fall out of those knobs: Micro_h = 0 drops the microwave for a SINGLE-OVEN
+// column (a tall plain door over the oven), and Warming_h > 0 turns the top slice of the band
+// under the oven into one shallow WARMING DRAWER — the two other ways a real oven housing is
+// fitted.
+//
 // It prints the right way up: everything on the face is a cut, and the magnet pocket opens
 // at the plinth like every other unit in the run.
 
@@ -57,7 +62,11 @@ Show_fronts = true;
 // lands in the room and not merely where it lands on the face.
 Oven_z  = 60;  // cm off the floor to the underside of the oven's case ...
 Oven_h  = 60;  // ... the oven's own case height ...
-Micro_h = 45;  // ... and the combi microwave's, sitting directly on top of it
+Micro_h = 45;  // ... and the combi microwave's on top of it (Micro_h=0 -> a single-oven column)
+// A warming drawer under the oven, real cm (0 = a plain door there instead). It is the top
+// slice of the band below the oven turned into one shallow, handleless drawer front — what a
+// real single-oven housing carries where the microwave is not.
+Warming_h = 0;  // cm
 // Each aperture's control fascia, real cm of its own height — deeper than the run's
 // Fascia_h, because on an oven it is the whole display-and-dial band.
 Bay_fascia = 8;  // cm
@@ -111,6 +120,14 @@ function micro_z1() = micro_z0() + want_micro() * squeeze();
 function band_min() = bay_gap() + Symbol_stroke;
 // One course of plain door per Door_height cm of a band <h> printed mm tall.
 function courses(h) = max(1, round(rise_cm(h) / Door_height));
+// The two variant knobs: is there a microwave over the oven, is there a warming drawer under
+// it — and how tall that drawer comes out, clamped to the band below the oven and squeezed
+// with everything else so a short column keeps its proportions.
+function has_micro()   = Micro_h > 0;
+function has_warming() = Warming_h > 0;
+function warm_h() = has_warming()
+                        ? min(rise(Warming_h) * squeeze(), max(0, low_z1() - face_z0()))
+                        : 0;
 
 module oven_column() {
     if (squeeze() < 1)
@@ -133,18 +150,28 @@ module oven_column() {
 module fronts() {
     z0 = face_z0();
     z1 = face_z1();
-    if (low_z1() - z0 >= band_min())
-        unit_fronts(Width, Depth, z0, low_z1(), 1, courses(low_z1() - z0), Slab);
-    else if (low_z1() > z0)
-        echo(str("NOTE: ", rise_cm(low_z1() - z0),
+    // below the oven: plain door(s) up to door_top, then — if asked — a warming drawer as the
+    // top slice of the band, the shallow front sitting directly under the oven.
+    door_top = low_z1() - warm_h();
+    if (door_top - z0 >= band_min())
+        unit_fronts(Width, Depth, z0, door_top, 1, courses(door_top - z0), Slab);
+    else if (door_top > z0)
+        echo(str("NOTE: ", rise_cm(door_top - z0),
                  " cm is left under the oven — too little for a door front, left plain"));
+    if (has_warming() && warm_h() >= band_min())
+        unit_fronts(Width, Depth, door_top, low_z1(), 1, 1, Slab);
+    else if (has_warming() && warm_h() > 0)
+        echo(str("NOTE: a ", rise_cm(warm_h()), " cm warming drawer at 1:", Scale,
+                 " is too shallow for a front — left plain"));
+    // the oven, and the microwave over it unless this is a single-oven column
     appliance_bay(low_z1(), oven_z1());
-    appliance_bay(micro_z0(), micro_z1());
+    if (has_micro())
+        appliance_bay(micro_z0(), micro_z1());
     if (z1 - micro_z1() >= band_min())
         unit_fronts(Width, Depth, micro_z1(), z1, 1, courses(z1 - micro_z1()), Slab);
     else if (z1 > micro_z1())
         echo(str("NOTE: ", rise_cm(z1 - micro_z1()),
-                 " cm is left over the microwave — too little for a door front, left plain"));
+                 " cm is left at the top of the column — too little for a door front, left plain"));
 }
 
 // One built-in appliance's face, between <zb> and <zt> printed mm up the carcass face: the
