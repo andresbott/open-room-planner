@@ -210,6 +210,56 @@ make walls DOOR_SWING=false           # plain openings, swing arc engraved inste
 make walls SLIDING_PANELS=3           # three-leaf sliders instead of two
 ```
 
+## Pool
+
+A swimming pool is built the way a room shell is — from square tiles that **butt flush on a
+fixed module**, assembled into one pool rather than printed in a piece. Four kinds make any
+rectangular pool:
+
+| kind | coping (the paved rim) | the rest of the tile |
+|---|---|---|
+| `corner` | two outside edges, an L | water on the inner quarter |
+| `edge` | one outside edge | water — a side of the pool |
+| `water` | — | water to every edge — an interior tile |
+| `steps` | one outside edge | water that **steps down** from it — the shallow end |
+
+The smallest pool is **four corners** — already a full coping ring round four quarters of water.
+A longer one drops `edge` tiles along the sides and `water` tiles in the middle, with a `steps`
+tile where you get in:
+
+```
+[corner][ edge ][corner]
+[ edge ][water ][ edge ]     turn a corner or edge in the plan to face its coping outward, the
+[corner][steps ][corner]     way you turn a wall — the default corner faces −X/−Y (a SW corner),
+                             a quarter turn gives the other three.
+```
+
+Where two tiles meet, the water runs right to the edge, so it reads as **one continuous sheet**
+while each tile still prints as its own watertight tray. Like a shower tray a pool tile is nearly
+floor level, and its height is set not by how deep a pool is but by what it takes to sink a pan of
+water **above a magnet pocket** — so it is a low tile that clamps the water and says so in the
+render log if it had to (raise `POOL_H`).
+
+```sh
+make pool                     # the four tiles at the 200 cm (2 m) module
+make pool POOL_MODULE=150     # a smaller module — a plunge pool
+make pool POOL_H=45           # a deeper pool (more water sunk over the magnet)
+```
+
+## Ruler
+
+A ruler for the plan itself: a low flat bar with a **tick every 50 cm and a numbered one every
+100**, so you can lay it across the board and read how much real room a run takes without doing
+the 1:40 arithmetic. Its marks are drawn through the same `cm()` the parts use, so the ruler is
+**correct at whatever scale the set is built at** — render everything at 1:50 and its hundreds
+move to 20 mm apart to match.
+
+```sh
+make tools                    # a 3 m and a 5 m ruler
+make tools RULER_LENGTHS=200  # a shorter one
+make tools RULER_MAGNETS=0    # no pockets — a handheld ruler you slide about
+```
+
 ## Magnets
 
 Parts can hold onto a steel plan surface with neodymium discs dropped into

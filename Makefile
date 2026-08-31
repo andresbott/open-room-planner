@@ -89,7 +89,7 @@ endef
 ##@ Rendering
 #==========================================================================================
 .PHONY: all
-all: bedroom livingroom kitchen diningroom bathroom office hallway kidsroom laundry outdoor walls ## render every room + walls (STLs + previews)
+all: bedroom livingroom kitchen diningroom bathroom office hallway kidsroom laundry outdoor hobby walls pool tools ## render every room + structure (STLs + previews)
 
 # ---- Bedroom -----------------------------------------------------------------
 BEDROOM_DIR  := $(FILES_DIR)/bedroom
@@ -512,7 +512,8 @@ laundry: $(LAUNDRY_STLS) $(LAUNDRY_PNGS) ## render laundry parts + previews -> f
 
 # ---- Balcony / outdoor -------------------------------------------------------
 # Real heights in cm: a garden table at 74, the seating with its back over its seat
-# (see chair.scad / sofa.scad), and a 40 cm pot — build it at 80+ for a tree.
+# (see chair.scad / sofa.scad), a 40 cm pot — build it at 80+ for a tree — a gas barbecue on
+# a cart at counter height (90), and a low wood-burning fire pit (45).
 OUTDOOR_DIR := $(FILES_DIR)/outdoor
 OD_TABLE_H     ?= 74
 OD_CHAIR_H     ?= 85
@@ -520,6 +521,8 @@ OD_CHAIR_SEAT  ?= 42
 OD_SOFA_H      ?= 80
 OD_SOFA_SEAT   ?= 42
 PLANTER_H      ?= 40
+GRILL_H        ?= 90
+FIRE_PIT_H     ?= 45
 # magnet pockets per table: one per foot, in diagonal order (see outdoor/table.scad) — two,
 # corner to opposite corner, are what stop a legged top tilting or pivoting
 OD_TABLE_MAGNETS ?= 2
@@ -527,12 +530,37 @@ $(eval $(call part,outdoor,table,Height=$(OD_TABLE_H);Magnets=$(OD_TABLE_MAGNETS
 $(eval $(call part,outdoor,chair,Height=$(OD_CHAIR_H);Seat=$(OD_CHAIR_SEAT);Magnets=1,chair))
 $(eval $(call part,outdoor,sofa,Height=$(OD_SOFA_H);Seat=$(OD_SOFA_SEAT);Magnets=2,sofa))
 $(eval $(call part,outdoor,planter,Height=$(PLANTER_H);Magnets=1,planter))
+# A gas barbecue on a cart — a firebox with a bar grate and a lid hump, a side burner, and the
+# controls + cupboard on the front. Two pockets, in the plinth like the kitchen run.
+$(eval $(call part,outdoor,grill,Height=$(GRILL_H);Magnets=2,grill))
+# A wood-burning fire pit — a tapered bowl with a log stack in it; round, plus a square variant.
+$(eval $(call part,outdoor,fire_pit,Height=$(FIRE_PIT_H);Magnets=1,fire_pit))
+$(eval $(call part,outdoor,fire_pit,Round=false;Height=$(FIRE_PIT_H);Magnets=1,fire_pit_square))
 
 OUTDOOR_STLS := $(STLS_outdoor)
 OUTDOOR_PNGS := $(OUTDOOR_STLS:.stl=.png)
 
 .PHONY: outdoor
 outdoor: $(OUTDOOR_STLS) $(OUTDOOR_PNGS) ## render outdoor parts + previews -> files/outdoor/
+
+# ---- Hobby / gym -------------------------------------------------------------
+# Real heights in cm: a treadmill deck at 18 (its console stands ~115 cm above it), a multi-gym
+# frame up at 210, and a weight bench at seat height. The gym pieces read by their masses and
+# frames — the treadmill's belt and console, the multi-gym's plate stack, the bench's stacked
+# plates — not by cables or bars, which do not print at 1:40 (see the .scad headers).
+HOBBY_DIR := $(FILES_DIR)/hobby
+TREADMILL_H    ?= 18
+MULTI_GYM_H    ?= 210
+WEIGHT_BENCH_H ?= 45
+$(eval $(call part,hobby,treadmill,Height=$(TREADMILL_H);Magnets=2,treadmill))
+$(eval $(call part,hobby,multi_gym,Height=$(MULTI_GYM_H);Magnets=2,multi_gym))
+$(eval $(call part,hobby,weight_bench,Height=$(WEIGHT_BENCH_H);Magnets=2,weight_bench))
+
+HOBBY_STLS := $(STLS_hobby)
+HOBBY_PNGS := $(HOBBY_STLS:.stl=.png)
+
+.PHONY: hobby
+hobby: $(HOBBY_STLS) $(HOBBY_PNGS) ## render hobby / gym parts + previews -> files/hobby/
 
 # ---- Walls / structure -------------------------------------------------------
 # Straight interior wall segments: <thickness>x<length> footprints in cm. One
@@ -614,6 +642,44 @@ WALLS_PNGS := $(WALLS_STLS:.stl=.png)
 .PHONY: walls
 walls: $(WALLS_STLS) $(WALLS_PNGS) ## render wall segments, windows + doors -> files/walls/
 
+# ---- Pool --------------------------------------------------------------------
+# A swimming pool built from composable tiles that butt flush on a fixed module, the way the
+# walls build a room shell (see pool/pool.scad). Four Kinds — corner, edge, water and steps —
+# lay out to any rectangular pool: a coping ring round a continuous sheet of water. The smallest
+# pool is four corners; add edges along the sides and water tiles in the middle for a bigger one,
+# and a steps tile for the shallow end. Turn a corner/edge in the plan to face its coping out.
+# A tile is a low near-floor piece (like a shower tray) — POOL_H is set by burying a magnet under
+# the water, not by how tall a pool is. POOL_MODULE is the tile side (200 = a 2 m square).
+POOL_DIR := $(FILES_DIR)/pool
+POOL_MODULE  ?= 200
+POOL_H       ?= 35
+POOL_COPING  ?= 30
+POOL_KINDS   := corner edge water steps
+POOL_MAGNETS ?= 2
+$(foreach k,$(POOL_KINDS),$(eval $(call part,pool,pool,Kind="$(k)";Module=$(POOL_MODULE);Height=$(POOL_H);Coping=$(POOL_COPING);Magnets=$(POOL_MAGNETS),$(k))))
+
+POOL_STLS := $(STLS_pool)
+POOL_PNGS := $(POOL_STLS:.stl=.png)
+
+.PHONY: pool
+pool: $(POOL_STLS) $(POOL_PNGS) ## render pool tiles + previews -> files/pool/
+
+# ---- Tools -------------------------------------------------------------------
+# A measuring ruler for the plan: a low flat bar with a tick every 50 cm and a numbered one every
+# 100, drawn through cm() so it is correct at whatever Scale the set is built at (see
+# tools/ruler.scad). RULER_LENGTHS are the real distances it spans, in cm. A thin bar, so like a
+# wall it takes the small 2x1 disc (with the pad path); RULER_MAGNETS=0 for a handheld one.
+TOOLS_DIR := $(FILES_DIR)/tools
+RULER_LENGTHS := 300 500
+RULER_MAGNETS ?= 2
+$(foreach l,$(RULER_LENGTHS),$(eval $(call part,tools,ruler,Length=$(l);Magnets=$(RULER_MAGNETS),ruler_$(l))))
+
+TOOLS_STLS := $(STLS_tools)
+TOOLS_PNGS := $(TOOLS_STLS:.stl=.png)
+
+.PHONY: tools
+tools: $(TOOLS_STLS) $(TOOLS_PNGS) ## render tools (ruler) + previews -> files/tools/
+
 #------------------------------------------------------------------------------------------
 # Generic recipes. Each concrete target supplies its own SRC + PARAMS (see room blocks).
 #   %.stl -> geometry;  %.png -> OpenSCAD image, trimmed + margined via ImageMagick.
@@ -633,7 +699,8 @@ walls: $(WALLS_STLS) $(WALLS_PNGS) ## render wall segments, windows + doors -> f
 #==========================================================================================
 ALL_STLS := $(BEDROOM_STLS) $(LIVINGROOM_STLS) $(KITCHEN_STLS) $(DININGROOM_STLS) \
             $(BATHROOM_STLS) $(OFFICE_STLS) $(HALLWAY_STLS) $(KIDSROOM_STLS) \
-            $(LAUNDRY_STLS) $(OUTDOOR_STLS) $(WALLS_STLS)
+            $(LAUNDRY_STLS) $(OUTDOOR_STLS) $(HOBBY_STLS) $(WALLS_STLS) \
+            $(POOL_STLS) $(TOOLS_STLS)
 
 .PHONY: list
 list: ## list every declared part and the .scad it renders from
@@ -698,9 +765,25 @@ clean-walls: ## remove rendered wall files (files/walls/)
 	@rm -rf "$(WALLS_DIR)"
 	@echo "✅ removed $(WALLS_DIR)"
 
+.PHONY: clean-hobby
+clean-hobby: ## remove rendered hobby files (files/hobby/)
+	@rm -rf "$(HOBBY_DIR)"
+	@echo "✅ removed $(HOBBY_DIR)"
+
+.PHONY: clean-pool
+clean-pool: ## remove rendered pool files (files/pool/)
+	@rm -rf "$(POOL_DIR)"
+	@echo "✅ removed $(POOL_DIR)"
+
+.PHONY: clean-tools
+clean-tools: ## remove rendered tools files (files/tools/)
+	@rm -rf "$(TOOLS_DIR)"
+	@echo "✅ removed $(TOOLS_DIR)"
+
 .PHONY: clean
 clean: clean-bedroom clean-livingroom clean-kitchen clean-diningroom clean-bathroom \
-       clean-office clean-hallway clean-kidsroom clean-laundry clean-outdoor clean-walls ## remove all rendered files
+       clean-office clean-hallway clean-kidsroom clean-laundry clean-outdoor clean-hobby \
+       clean-walls clean-pool clean-tools ## remove all rendered files
 
 # FORCE (always out of date) is only pulled in when REBUILD=1.
 .PHONY: FORCE

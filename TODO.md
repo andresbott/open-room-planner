@@ -255,6 +255,31 @@ washer, none on the dryer, both plus a seam on the stacked tower.
 - [x] Planter / plant pot
   low-high; round 40 cm (square with Round=false), a tapered pot with a real hollow in it and
   the soil as its floor; build at Height=80+ for a tree - scad/outdoor/planter.scad
+- [x] Grill / barbecue
+  med; 120x60 at 90 cm, a gas BBQ cart — a sunken firebox with a bar grate and a lid hump, a
+  side burner on the prep shelf, knob dips and cupboard doors on the front face -
+  scad/outdoor/grill.scad
+  - [ ] Wider variant in the Makefile (the part sizes its firebox and prep off Width)
+- [x] Fire pit
+  low; round 70 cm (square with Round=false) at 45 cm, a tapered bowl with a real hollow and a
+  criss-cross log stack in it — the planter's cousin, told apart by the logs -
+  scad/outdoor/fire_pit.scad
+
+## Hobby / gym
+The gym pieces are read by their masses and frames — a treadmill's belt and console, the
+multi-gym's plate stack, the weight bench's stacked plates — not by cables or bars, which are a
+1 mm thread at 1:40 and do not print (see the .scad headers).
+- [x] Treadmill
+  low-high; 85x200 cm, a low deck with the belt sunk between side rails (slats across it) and a
+  console board standing ~115 cm at the back with a display on its front face -
+  scad/hobby/treadmill.scad
+- [x] Multi-gym / weight machine
+  high; 110x95 at 210 cm, a frame with a weight stack (plates as relief on its front) at one end,
+  a top bar, and a seat with a backrest out front - scad/hobby/multi_gym.scad
+- [x] Weight bench
+  low; 95x130 at 45 cm, a narrow padded bench on a leg frame beside a stack of weight plates
+  (the barbell left off — it does not print at 1:40) - scad/hobby/weight_bench.scad
+  - [ ] Incline / adjustable-back variant, and a dumbbell rack
 
 # Structure
 
@@ -267,3 +292,23 @@ washer, none on the dryer, both plus a seam on the stacked tower.
   wall height, drops to the same 2.7 mm threshold as a door (both are walked over), with a line per leaf on two tracks across the wall instead of a swing — so it takes no floor and a sofa can go against it; openings 150/175/200/250/300 cm (1/8 m series), no hand - scad/walls/sliding_door.scad
 - [x] Door segments
   wall height, drops to a 2.7 mm threshold that carries on into the room as the quarter circle the leaf sweeps, so the piece occupies the swing, with the opening width engraved on that plate; openings 62.5/75/87.5/100/112.5 cm (DIN 18101 Rohbaumass), left/right hand - scad/walls/door.scad
+
+## Pool
+Composable tiles that butt flush on a fixed module, the way the walls build a room shell: four
+Kinds lay out to any rectangular pool — a coping ring round a continuous sheet of water. A tile
+is a low near-floor piece (like a shower tray) whose height is set by burying a magnet under the
+water; turn a corner/edge in the plan to face its coping outward.
+- [x] Pool tiles
+  low; 200 cm module at 35 cm, Kind = corner / edge / water / steps — the smallest pool is four
+  corners, add edges and water for a bigger one and a steps tile for the shallow end -
+  scad/pool/pool.scad
+  - [ ] More module sizes in the Makefile (150 for a plunge pool; the part takes any Module)
+  - [ ] A rounded / kidney corner variant
+
+# Tools
+
+## Measuring
+- [x] Ruler
+  a low flat bar with a tick every 50 cm and a numbered one every 100, drawn through cm() so it
+  is correct at any Scale; spans 300/500 cm - scad/tools/ruler.scad
+  - [ ] More lengths in the Makefile (the part takes any Length)
