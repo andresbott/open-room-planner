@@ -13,8 +13,8 @@
 //     steps    an edge tile whose water STEPS down from the coping — the shallow-end entry
 //     round    a corner whose OUTSIDE corner and water edge are rounded (a curved pool end);
 //              the two straight edges still butt, so only the free corner curves
-//     ladder   an edge tile with a narrow, multi-tread flight of entry steps — a pool ladder,
-//              the deep-end way in, its step edges reading as rungs where a Roman step won't fit
+//     ladder   an edge tile with a SOLID pool ladder standing at the -Y edge: a rounded slab
+//              that rises from the floor and curves over the coping, its rungs cut as blind relief
 //
 // The smallest pool is four corners (turned to face out — see below), which already give a full
 // coping ring round four quarters of water. A longer pool drops `edge` tiles along the sides
@@ -31,8 +31,10 @@
 // an interior `water` tile is simply that floor, a low slab that sits below the coping round it.
 //
 // It prints the right way up with nothing to support: the water is a recess that opens UPWARD
-// (its walls are vertical, like a real pool wall — no overhang), the coping is solid, the steps
-// and the ladder flight rise as a plain staircase from the floor to the deck. The pool is left as
+// (its walls are vertical, like a real pool wall — no overhang), the coping is solid, and the steps
+// rise as a plain staircase from the floor to the deck. The ladder is a SOLID slab standing at the
+// edge — its rungs cut as blind relief (no open holes), and its only lean, the top curving over the
+// coping, kept under 45°. The pool is left as
 // an EMPTY BASIN — a bare sunken floor, with no water surface modelled in it. Like the shower tray, a
 // pool is nearly floor level, and its Height is set not by how tall a pool is but by what it
 // takes to sink a visible pan of water ABOVE a magnet pocket — so it is a low tile, clamped to
@@ -73,20 +75,29 @@ Steps_run = 55;   // ... and how far into the tile (cm) they reach before the fu
 // square, so a round tile still butts its neighbours.
 Corner_r = 0;
 
-// The pool ladder (Kind = "ladder"): a LADDER FRAME of round tube standing at the -Y pool edge —
-// two rails joined at the top, with rungs across, that rise from the pool floor and then curve OVER
-// THE POOL BORDER toward the deck, the way a real pool ladder's handrails arch over. It is the
-// recognisable ladder silhouette (one connected frame, not two loose posts), built from THICK round
-// bars so it prints sturdy rather than as thin wire, and kept low. The rungs and the top span the
-// short gap between the rails as short bridges — a ladder is open rungs, and the span is short
-// enough to print clean; the hair-thin curved tubes of a real ladder are the only thing that won't.
-Ladder_w   = 40;  // cm — the frame's outer width, rail to rail (narrow, so it reads as a ladder)
-Bar_w      = 11;  // cm — the rail tube diameter (thick, so it prints sturdy, not a thin wire)
-Rung_w     = 8;   // cm — the rung tube diameter
-Rungs      = 4;   // treads up the straight part, where they show above the deck
-Rail_up    = 28;  // cm the rails rise straight above the deck before curving over
-Arch_rise  = 12;  // cm the curved top adds above that ...
-Arch_over  = 10;  // ... leaning this far toward the deck, out over the pool border
+// The pool ladder (Kind = "ladder"): a SOLID pool ladder standing at the -Y pool edge — a rounded
+// slab (a fin, thin in Y) that rises from the pool floor, past the deck, and curves OVER THE COPING
+// toward -Y the way a real pool ladder's handrails arch over. Where the old ladder was an open frame
+// of thin tube, this is one solid body: more figurative, sturdy, and with nothing to bridge. The
+// rungs are RELIEF — shallow blind grooves cut across the front (-Y) face between two rails left
+// standing proud at the sides — so it reads as a ladder at a glance but has NO OPEN HOLES: each
+// groove is a short ceiling in a vertical wall, which prints without support. Its only lean is the
+// arched top, clamped so it never oversails more than 45° over the coping (over, below).
+//
+//        __              a rounded slab, seen from the front (-Y):
+//      /    \            - the top curves over the coping toward the deck (<=45°)
+//     | |||| |           - two rails stand proud at the sides ( | ... | )
+//     | |||| |           - the rungs are grooves cut between them ( |||| )
+//     |_||||_|           - it welds to the pool floor and rises past the deck
+//
+Ladder_w   = 46;  // cm — the slab's outer width, rail to rail (narrow, so it reads as a ladder)
+Ladder_d   = 16;  // cm — the slab's thickness in Y (a solid fin — prints as a wall, nothing bridges)
+Rail       = 9;   // cm — the rail left proud at each side (the rung grooves stop short of it)
+Rungs      = 4;   // rungs shown in the relief field (grooves between them are blind — no holes)
+Rung_cut   = 1.6; // printed mm each rung groove is sunk into the front face (blind, ~2 mm left behind)
+Rail_up    = 26;  // cm the slab rises above the deck before the top curves over
+Arch_rise  = 14;  // cm the curved top adds above that ...
+Arch_over  = 9;   // ... leaning this far toward the deck (clamped to <=45°: over = min(this, rise))
 
 // Coping joints: one groove down the middle of each paved rim, parallel to the pool edge, so a
 // big flat band of coping reads as paving and not as a blank wall top. Ink, but the coping is
@@ -144,8 +155,8 @@ module pool() {
             if (Show_joints) coping_joints();
             pool_magnets();
         }
-        // added on top of the solid: the ladder frame
-        if (Kind == "ladder") ladder_frame();
+        // added on top of the solid: the solid ladder standing at the -Y edge
+        if (Kind == "ladder") ladder_body();
     }
 }
 
@@ -185,7 +196,7 @@ module box_2d(x0, x1, y0, y1) {
 // The water: one downward recess for a flat pool floor, the `round` tile's rounded region, or —
 // for `steps` — a flight near the -Y coping (each tread cut a little deeper than the last)
 // giving way to full-depth water beyond it. The `ladder` tile cuts full-depth water like an
-// edge and gets its ladder frame added back on top (ladder_frame).
+// edge and gets its solid ladder added back on top (ladder_body).
 module water_cut() {
     if (Kind == "steps" && steps_run() > 0) {
         n   = max(1, Steps);
@@ -224,40 +235,69 @@ module cut_box(x0, x1, y0, y1, dz) {
 }
 
 // ---- the ladder -------------------------------------------------------------
-// A flat ladder frame standing at the -Y pool edge: two rails from the pool floor up past the deck,
-// joined at the top by a bar (an inverted U, so it reads as one frame and not two posts), with
-// Rungs treads down the submerged part. Its feet stand on the pool floor, welding it to the tile;
-// it stands a little clear of the wall so the whole silhouette shows. Built from rounded flat bars
-// (a hull of two discs), thin in Y — a cut-out ladder. The rungs and top bar are short bridges (see
-// the header): a ladder is open rungs, and at this narrow width the span prints clean.
-module ladder_frame() {
-    yc     = wy0() + Bar_w / 2 + 2;                 // frame plane, just inside the pool edge (cm)
-    z_bot  = floor_z();                             // feet, on the pool floor (printed mm)
-    z_knee = Print_h + rise(Rail_up);               // top of the straight part
+// A SOLID pool ladder standing at the -Y pool edge: a rounded slab (a fin, thin in Y) rising from
+// the pool floor, past the deck, its top curving OVER the coping toward -Y — the handrail arch of a
+// real pool ladder, but built solid so it is figurative and sturdy with nothing to bridge. The rungs
+// are relief (ladder_rungs): shallow blind grooves across the front face between two proud side
+// rails, so it reads as a ladder yet has no open holes. The only lean is the arched top, clamped so
+// it never oversails more than 45° — the lean is a Y step over a Z rise, so the clamp is in printed
+// space and tightens as Height_scale shrinks the piece. Its foot buries into the pool floor, welding
+// it to the tile; it stands a little clear of the coping so the whole silhouette shows.
+module ladder_body() {
+    r      = Ladder_d / 2;                          // fin half-thickness (cm)
+    yc     = wy0() + r + 2;                          // fin plane, just inside the pool edge (cm)
+    z_bot  = floor_z();                              // foot, on the pool floor (printed mm)
+    z_knee = Print_h + rise(Rail_up);               // top of the straight part (printed mm)
+    over   = min(Arch_over, Arch_rise * Height_scale);  // lean, clamped to <=45° in printed space
     z_top  = z_knee + rise(Arch_rise);              // the arched handrail top ...
-    y_top  = yc - Arch_over;                        // ... leaned over the pool border, toward -Y
-    rx     = Ladder_w / 2 - Bar_w / 2;             // each rail's centre, in from the edge
-    for (s = [-1, 1]) {
-        tube([s * rx, yc, z_bot],  [s * rx, yc, z_knee], Bar_w);       // the straight rail
-        tube([s * rx, yc, z_knee], [s * rx, y_top, z_top], Bar_w);     // the curve over the border
-    }
-    tube([-rx, y_top, z_top], [rx, y_top, z_top], Bar_w);             // the top handrail bar
-    // the rungs, up the straight part so they show above the deck
-    n  = max(1, Rungs);
-    zt = z_knee - rise(4);
-    zb = z_bot + rise(5);
-    for (k = [0 : n - 1]) {
-        z = n > 1 ? zb + (zt - zb) * k / (n - 1) : (zt + zb) / 2;
-        tube([-rx, yc, z], [rx, yc, z], Rung_w);
+    y_top  = yc - over;                              // ... leaned toward the deck (-Y)
+    ex     = max(0, Ladder_w / 2 - r);              // the rounded rail-end centres, in from the edge
+
+    if (over < Arch_over - 0.001)
+        echo(str("NOTE: ladder top lean clamped from ", Arch_over, " to ", over,
+                 " cm so it stays under 45° at Height_scale ", Height_scale,
+                 " (give it more rise: ARCH_RISE)"));
+
+    difference() {
+        union() {
+            translate([0, 0, z_bot])                 // the straight fin, floor -> knee
+                linear_extrude(height = z_knee - z_bot) fin_2d(ex, yc);
+            hull() {                                  // the top, curving over the coping
+                translate([0, 0, z_knee - 0.01])
+                    linear_extrude(height = 0.02) fin_2d(ex, yc);
+                for (s = [-1, 1])
+                    translate([cm(s * ex), cm(y_top), z_top]) sphere(d = cm(Ladder_d), $fn = 24);
+            }
+        }
+        ladder_rungs(yc, r, z_bot, z_knee);           // the rungs, as blind relief in the front face
     }
 }
 
-// A round tube of diameter <w> cm between two points, each [x_cm, y_cm, z_printed_mm] — a hull of
-// two spheres, so it runs in any direction (the rails curve out over the border) and stays a clean
-// round bar that prints sturdy.
-module tube(a, b, w) {
-    hull() for (p = [a, b])
-        translate([cm(p[0]), cm(p[1]), p[2]]) sphere(d = cm(w), $fn = 18);
+// The fin's cross-section: a stadium (a rounded bar) Ladder_w cm wide and Ladder_d cm thick, centred
+// on the fin plane <yc> cm, its rounded ends <ex> cm out from centre — so the rails read round-ended.
+module fin_2d(ex, yc) {
+    hull() for (s = [-1, 1])
+        translate([cm(s * ex), cm(yc)]) circle(d = cm(Ladder_d), $fn = 24);
+}
+
+// The rungs: a stack of shallow horizontal grooves cut into the front (-Y) face of the fin, each
+// spanning the field between the two side rails and sunk Rung_cut printed mm — blind recesses, so
+// the ladder reads as rungs with NO open holes to bridge. The grooves fall between the proud rungs,
+// running from a little below the deck (a rung shows at the water line) up to just under the knee;
+// the field stops Rail cm short of each edge, leaving the side rails standing proud.
+module ladder_rungs(yc, r, z_bot, z_knee) {
+    z_a   = max(z_bot + rise(4), Print_h - rise(12));  // lowest groove ...
+    z_b   = z_knee - rise(4);                           // ... to just under the top
+    fw    = Ladder_w - 2 * Rail;                        // the groove field width (cm)
+    bands = 2 * max(1, Rungs) + 1;                       // grooves top, bottom and between the rungs
+    face  = cm(yc - r);                                  // the fin's front (-Y) face, printed mm
+    if (fw > 0 && z_b > z_a)
+        for (k = [0 : 2 : bands - 1]) {                 // the even bands are the grooves
+            gh = (z_b - z_a) / bands;
+            zc = z_a + (z_b - z_a) * (k + 0.5) / bands;
+            translate([0, face + Rung_cut / 2 - 0.05, zc])
+                cube([cm(fw), Rung_cut + 0.1, gh * 0.82], center = true);
+        }
 }
 
 // ---- coping and magnets -----------------------------------------------------

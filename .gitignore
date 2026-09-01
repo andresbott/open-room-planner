@@ -1,2 +1,7 @@
 # KDE / Dolphin per-folder view settings
 .directory
+
+# Print mats: the SVGs are tracked, the PDFs are not — the SVG->PDF converters embed a
+# timestamp so the PDFs are not byte-reproducible. Regenerate them with `make mat`.
+files/mat/*.pdf
+files/mat/**/*.pdf

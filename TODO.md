@@ -160,6 +160,14 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
 
 ## Walls
 
+- [x] Wall corners
+  med; an L of two wall arms meeting at a right angle, one per thickness (11.5/17.5/24) with
+  ~30 cm stub legs — drop one at each room corner and imply the run between, rather than a
+  segment along every wall. Square-ended so it still butts a straight wall; one L covers all
+  four corners by turning it (no hand); no engraved number, the shape does the work -
+  scad/walls/corner.scad
+  - [ ] More corner leg lengths / a size matrix in the Makefile (the part takes any Leg)
+
 ## Pool
 
 - [x] Pool tiles
@@ -179,6 +187,11 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
 - [x] make the pool ladder read as a pool ladder
   a thick round-tube frame — two rails + rungs, arching over the pool border like a real handrail
   (one connected piece, not posts, kept low and sturdy) - scad/pool/pool.scad
+- [x] redraw the pool ladder in a more figurative shape, no holes, easier to print
+  replaced the open round-tube frame with one solid rounded slab standing at the -Y edge: the rungs
+  are blind relief grooves between two proud side rails, and the rounded top curves over the coping
+  (lean clamped to <=45°) — nothing to bridge, no open holes, prints as a vertical wall
+  - scad/pool/pool.scad
 
 # Tools
 
@@ -189,6 +202,11 @@ height or under (~45 cm), med = counter height (~75-100), high = over head heigh
   is correct at any Scale; spans 300/500 cm - scad/tools/ruler.scad
   - [x] More lengths in the Makefile (the part takes any Length)
   - [x] the last numner of the ruler is always cut off
+- [x] Printable grid mat
+  a paper A4 play-mat the tokens stand on: a slight 50 cm grid + a ruler border, an SVG generated
+  by print/grid_mat.py (make mat) — portrait/landscape, tracking the set's SCALE like the ruler
+  (1:40 by default); a 50 mm calibration bar checks the print is at 100 % - print/grid_mat.py
+  - [x] More paper sizes: A4 + A3 by default (MAT_PAPERS); A5 / US Letter also known to the generator
 
 # Fixes
 
