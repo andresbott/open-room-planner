@@ -89,14 +89,14 @@ endef
 ##@ Rendering
 #==========================================================================================
 .PHONY: all
-all: bedroom livingroom kitchen diningroom bathroom office hallway kidsroom laundry outdoor walls ## render every room + walls (STLs + previews)
+all: bedroom livingroom kitchen diningroom bathroom office hallway kidsroom laundry outdoor hobby walls pool tools ## render every room + structure (STLs + previews)
 
 # ---- Bedroom -----------------------------------------------------------------
 BEDROOM_DIR  := $(FILES_DIR)/bedroom
 
 # -- Beds: one piece per mattress size, in cm (IKEA naming). Height is the top of
 #    the mattress — one of the lowest pieces of the set.
-BED_SIZES := 80x200 90x200 140x200 160x200
+BED_SIZES := 80x200 90x200 120x200 140x200 160x200 180x200
 BED_H     ?= 50
 # magnet pockets per bed, in a row along the length (0 = none)
 BED_MAGNETS ?= 2
@@ -125,6 +125,11 @@ HEMNES_H     ?= 96
 # magnet pockets per chest, in a row along the width (0 = none)
 HEMNES_MAGNETS ?= 2
 $(foreach s,$(HEMNES_SIZES),$(eval $(call part,bedroom,ikea_hemnes,Width=$(word 1,$(subst x, ,$(s)));Depth=$(word 2,$(subst x, ,$(s)));Height=$(HEMNES_H);Magnets=$(HEMNES_MAGNETS),ikea_hemnes_$(s))))
+# The narrow 2-drawer chest (54x50, one column of two, a lower 66 cm carcass) and the wide
+# 8-drawer one (160x50, two columns of four at the 96 cm carcass) — the same part, Cols and
+# Drawers driving how many fronts it carries (see ikea_hemnes.scad).
+$(eval $(call part,bedroom,ikea_hemnes,Width=54;Depth=50;Height=66;Cols=1;Drawers=2;Magnets=1,ikea_hemnes_54x50))
+$(eval $(call part,bedroom,ikea_hemnes,Width=160;Depth=50;Height=$(HEMNES_H);Cols=2;Drawers=4;Magnets=2,ikea_hemnes_160x50))
 
 # -- Bed-end benches: one piece per common width, in cm — 100/120 for a single or
 #    small double, 140/160 to span a queen/king footboard. Depth stays 40 (a
@@ -225,10 +230,17 @@ ARMCHAIR_SEAT   ?= 42
 TV_UNIT_H       ?= 45
 LR_SIDEBOARD_H  ?= 80
 LR_CONSOLE_H    ?= 80
+COFFEE_TABLE_H  ?= 40
 $(eval $(call part,livingroom,armchair,Height=$(ARMCHAIR_H);Seat=$(ARMCHAIR_SEAT);Magnets=1,armchair))
 $(eval $(call part,livingroom,tv_unit,Height=$(TV_UNIT_H);Magnets=2,tv_unit))
 $(eval $(call part,livingroom,sideboard,Height=$(LR_SIDEBOARD_H);Magnets=2,sideboard))
 $(eval $(call part,livingroom,console,Height=$(LR_CONSOLE_H);Magnets=2,console))
+# -- Coffee tables: a low, chunky "waterfall" cube — a thick top on two solid side slabs, printed
+#    upside down — by top size in cm: a rectangular 100x55, a 70x70 cube and a long 120x60. A
+#    deliberately blocky counterpoint to the leggy dining table (see coffee_table.scad).
+$(eval $(call part,livingroom,coffee_table,Width=100;Depth=55;Height=$(COFFEE_TABLE_H);Magnets=2,coffee_table_100x55))
+$(eval $(call part,livingroom,coffee_table,Width=70;Depth=70;Height=$(COFFEE_TABLE_H);Magnets=2,coffee_table_70x70))
+$(eval $(call part,livingroom,coffee_table,Width=120;Depth=60;Height=$(COFFEE_TABLE_H);Magnets=2,coffee_table_120x60))
 
 # -- Bookshelves: open shelving (BILLY-style), one piece per common width x
 #    height in cm; depth stays 28 (the BILLY carcass). The shelves are a real
@@ -269,6 +281,9 @@ $(eval $(call part,kitchen,worktop,Height=$(WORKTOP_H);Magnets=2,worktop))
 # a short run the width of the dishwasher (60 cm), to sit beside it or fill a gap; near
 # square, so one central pocket like the other 60 cm units rather than the long run's two
 $(eval $(call part,kitchen,worktop,Width=60;Height=$(WORKTOP_H);Magnets=1,worktop_60))
+# the in-between run lengths — 80 and 100 cm — the part sizes its cabinets off Width
+$(eval $(call part,kitchen,worktop,Width=80;Height=$(WORKTOP_H);Magnets=2,worktop_80))
+$(eval $(call part,kitchen,worktop,Width=100;Height=$(WORKTOP_H);Magnets=2,worktop_100))
 $(eval $(call part,kitchen,island,Height=$(ISLAND_H);Magnets=2,island))
 $(eval $(call part,kitchen,sink,Height=$(SINK_H);Magnets=2,sink))
 $(eval $(call part,kitchen,cooker,Height=$(COOKER_H);Magnets=1,cooker))
@@ -282,8 +297,20 @@ $(eval $(call part,kitchen,fridge,Height=$(FRIDGE_H);Magnets=1,fridge))
 # what stops an L pivoting (see Magnets in corner_unit.scad, where 1 and 3 mean other
 # layouts rather than fewer pockets in a row).
 $(eval $(call part,kitchen,corner_unit,Height=$(CORNER_UNIT_H);Magnets=2,corner_unit))
+# a bigger square corner (120x120, a 60x60 notch) and an unequal one (120x90) — the part
+# takes any Width/Depth/Arm (see corner_unit.scad)
+$(eval $(call part,kitchen,corner_unit,Width=120;Depth=120;Height=$(CORNER_UNIT_H);Magnets=2,corner_unit_120x120))
+$(eval $(call part,kitchen,corner_unit,Width=120;Depth=90;Height=$(CORNER_UNIT_H);Magnets=2,corner_unit_120x90))
 $(eval $(call part,kitchen,breakfast_bar,Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar))
+# more peninsula lengths — the part sizes its cabinets off Width (150 short, 210/240 long)
+$(eval $(call part,kitchen,breakfast_bar,Width=150;Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar_150))
+$(eval $(call part,kitchen,breakfast_bar,Width=210;Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar_210))
+$(eval $(call part,kitchen,breakfast_bar,Width=240;Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar_240))
 $(eval $(call part,kitchen,oven_column,Height=$(OVEN_COLUMN_H);Magnets=1,oven_column))
+# a single-oven column (no microwave) and a single oven over a warming drawer — the same
+# housing, Micro_h=0 dropping the microwave and Warming_h adding the drawer (see oven_column.scad)
+$(eval $(call part,kitchen,oven_column,Micro_h=0;Height=$(OVEN_COLUMN_H);Magnets=1,oven_column_single))
+$(eval $(call part,kitchen,oven_column,Micro_h=0;Warming_h=14;Height=$(OVEN_COLUMN_H);Magnets=1,oven_column_warming))
 
 KITCHEN_STLS := $(STLS_kitchen)
 KITCHEN_PNGS := $(KITCHEN_STLS:.stl=.png)
@@ -512,7 +539,8 @@ laundry: $(LAUNDRY_STLS) $(LAUNDRY_PNGS) ## render laundry parts + previews -> f
 
 # ---- Balcony / outdoor -------------------------------------------------------
 # Real heights in cm: a garden table at 74, the seating with its back over its seat
-# (see chair.scad / sofa.scad), and a 40 cm pot — build it at 80+ for a tree.
+# (see chair.scad / sofa.scad), a 40 cm pot — build it at 80+ for a tree — a gas barbecue on
+# a cart at counter height (90), and a low wood-burning fire pit (45).
 OUTDOOR_DIR := $(FILES_DIR)/outdoor
 OD_TABLE_H     ?= 74
 OD_CHAIR_H     ?= 85
@@ -520,19 +548,62 @@ OD_CHAIR_SEAT  ?= 42
 OD_SOFA_H      ?= 80
 OD_SOFA_SEAT   ?= 42
 PLANTER_H      ?= 40
+GRILL_H        ?= 90
+FIRE_PIT_H     ?= 45
 # magnet pockets per table: one per foot, in diagonal order (see outdoor/table.scad) — two,
 # corner to opposite corner, are what stop a legged top tilting or pivoting
 OD_TABLE_MAGNETS ?= 2
 $(eval $(call part,outdoor,table,Height=$(OD_TABLE_H);Magnets=$(OD_TABLE_MAGNETS),table))
+# the round garden table (Diameter=90) — four legs round the rim, the part takes Round=true
+$(eval $(call part,outdoor,table,Round=true;Diameter=90;Height=$(OD_TABLE_H);Magnets=$(OD_TABLE_MAGNETS),table_round_90))
 $(eval $(call part,outdoor,chair,Height=$(OD_CHAIR_H);Seat=$(OD_CHAIR_SEAT);Magnets=1,chair))
+# the sun lounger (a long 60x190 recliner) — the same part takes Lounger=true; two pockets
+# along its length, like a bed, keep the long piece from pivoting
+$(eval $(call part,outdoor,chair,Lounger=true;Height=$(OD_CHAIR_H);Seat=$(OD_CHAIR_SEAT);Magnets=2,lounger))
 $(eval $(call part,outdoor,sofa,Height=$(OD_SOFA_H);Seat=$(OD_SOFA_SEAT);Magnets=2,sofa))
 $(eval $(call part,outdoor,planter,Height=$(PLANTER_H);Magnets=1,planter))
+# A gas barbecue on a cart — a firebox with a bar grate and a lid hump, a side burner, and the
+# controls + cupboard on the front. Two pockets, in the plinth like the kitchen run.
+$(eval $(call part,outdoor,grill,Height=$(GRILL_H);Magnets=2,grill))
+# a wider 6-burner cart (160 cm) — the part sizes its firebox and prep shelf off Width
+$(eval $(call part,outdoor,grill,Width=160;Height=$(GRILL_H);Magnets=2,grill_160))
+# A wood-burning fire pit — a tapered bowl with a log stack in it; round, plus a square variant.
+$(eval $(call part,outdoor,fire_pit,Height=$(FIRE_PIT_H);Magnets=1,fire_pit))
+$(eval $(call part,outdoor,fire_pit,Round=false;Height=$(FIRE_PIT_H);Magnets=1,fire_pit_square))
 
 OUTDOOR_STLS := $(STLS_outdoor)
 OUTDOOR_PNGS := $(OUTDOOR_STLS:.stl=.png)
 
 .PHONY: outdoor
 outdoor: $(OUTDOOR_STLS) $(OUTDOOR_PNGS) ## render outdoor parts + previews -> files/outdoor/
+
+# ---- Hobby / gym -------------------------------------------------------------
+# Real heights in cm: a treadmill deck at 18 (its console stands ~115 cm above it), a multi-gym
+# frame up at 210, and a weight bench at seat height. The gym pieces read by their masses and
+# frames — the treadmill's belt and console, the multi-gym's plate stack, the bench's stacked
+# plates — not by cables or bars, which do not print at 1:40 (see the .scad headers).
+HOBBY_DIR := $(FILES_DIR)/hobby
+TREADMILL_H     ?= 18
+MULTI_GYM_H     ?= 210
+WEIGHT_BENCH_H  ?= 45
+DUMBBELL_RACK_H ?= 75
+$(eval $(call part,hobby,treadmill,Height=$(TREADMILL_H);Magnets=2,treadmill))
+$(eval $(call part,hobby,multi_gym,Height=$(MULTI_GYM_H);Magnets=2,multi_gym))
+$(eval $(call part,hobby,weight_bench,Height=$(WEIGHT_BENCH_H);Magnets=2,weight_bench))
+# a tiered dumbbell rack — the free-weights corner's other half
+$(eval $(call part,hobby,dumbbell_rack,Height=$(DUMBBELL_RACK_H);Magnets=2,dumbbell_rack))
+# -- Projector screen: a big upright screen on a low foot, one per screen width in cm. HEIGHT is
+#    the foot height only; the screen board stands its own 16:9 height above it (see the .scad).
+PROJECTOR_SCREEN_WIDTHS  := 200 280
+PROJECTOR_SCREEN_H       ?= 16
+PROJECTOR_SCREEN_MAGNETS ?= 2
+$(foreach w,$(PROJECTOR_SCREEN_WIDTHS),$(eval $(call part,hobby,projector_screen,Width=$(w);Height=$(PROJECTOR_SCREEN_H);Magnets=$(PROJECTOR_SCREEN_MAGNETS),projector_screen_$(w))))
+
+HOBBY_STLS := $(STLS_hobby)
+HOBBY_PNGS := $(HOBBY_STLS:.stl=.png)
+
+.PHONY: hobby
+hobby: $(HOBBY_STLS) $(HOBBY_PNGS) ## render hobby / gym parts + previews -> files/hobby/
 
 # ---- Walls / structure -------------------------------------------------------
 # Straight interior wall segments: <thickness>x<length> footprints in cm. One
@@ -557,6 +628,18 @@ WALL_H           ?= 25
 # of the two pockets.
 WALL_MAGNETS ?= 2
 $(foreach t,$(WALL_THICKNESSES),$(foreach l,$(WALL_LENGTHS),$(eval $(call part,walls,wall,Thickness=$(t);Length=$(l);Height=$(WALL_H);Magnets=$(WALL_MAGNETS),wall_$(t)x$(l)))))
+
+# -- Corners: an L of two wall arms meeting at a right angle, so a room is pegged out by a
+#    corner at each corner with the run between left IMPLIED, rather than a segment along
+#    every wall (scad/walls/corner.scad). One per thickness. CORNER_LEG is the cm each arm
+#    runs past the corner block — the visible stub, kept the same at every thickness so all
+#    read as a clean L. Square-ended, so a corner still butts flush against a straight
+#    segment; turned in the plan, one L covers all four corners (no hand). CORNER_MAGNETS is
+#    the pockets PER ARM (one holds it flat and stops it pivoting); the thin partition pads
+#    them as the straight walls do.
+CORNER_LEG     ?= 30
+CORNER_MAGNETS ?= 1
+$(foreach t,$(WALL_THICKNESSES),$(eval $(call part,walls,corner,Thickness=$(t);Leg=$(CORNER_LEG);Height=$(WALL_H);Magnets=$(CORNER_MAGNETS),corner_$(t))))
 
 # -- Openings: windows, doorways and sliding glazed doors, as short segments that butt
 #    between the plain
@@ -612,7 +695,91 @@ WALLS_STLS := $(STLS_walls)
 WALLS_PNGS := $(WALLS_STLS:.stl=.png)
 
 .PHONY: walls
-walls: $(WALLS_STLS) $(WALLS_PNGS) ## render wall segments, windows + doors -> files/walls/
+walls: $(WALLS_STLS) $(WALLS_PNGS) ## render wall segments, corners, windows + doors -> files/walls/
+
+# ---- Pool --------------------------------------------------------------------
+# A swimming pool built from composable tiles that butt flush on a fixed module, the way the
+# walls build a room shell (see pool/pool.scad). Six Kinds — corner, edge, water, steps, round
+# and ladder — lay out to any pool: a coping ring round a continuous sheet of water. The smallest
+# pool is four corners; add edges along the sides and water tiles in the middle for a bigger one,
+# a steps or ladder tile where you get in, and a round corner for a curved end. Turn a corner/edge
+# in the plan to face its coping out. A tile is a low near-floor piece (like a shower tray) —
+# POOL_H is set by burying a magnet under the water, not by how tall a pool is; the water surface
+# is rippled and the near-square tile takes a third magnet at its centre (POOL_CENTRE_MAGNET).
+# POOL_MODULE is the tile side (200 = a 2 m square).
+POOL_DIR := $(FILES_DIR)/pool
+POOL_MODULE  ?= 200
+POOL_H       ?= 35
+POOL_COPING  ?= 30
+POOL_KINDS   := corner edge water steps round ladder
+POOL_MAGNETS ?= 2
+POOL_CENTRE_MAGNET ?= true
+$(foreach k,$(POOL_KINDS),$(eval $(call part,pool,pool,Kind="$(k)";Module=$(POOL_MODULE);Height=$(POOL_H);Coping=$(POOL_COPING);Magnets=$(POOL_MAGNETS);Centre_magnet=$(POOL_CENTRE_MAGNET),$(k))))
+
+POOL_STLS := $(STLS_pool)
+POOL_PNGS := $(POOL_STLS:.stl=.png)
+
+.PHONY: pool
+pool: $(POOL_STLS) $(POOL_PNGS) ## render pool tiles + previews -> files/pool/
+
+# ---- Tools -------------------------------------------------------------------
+# A measuring ruler for the plan: a low flat bar with a tick every 50 cm and a numbered one every
+# 100, drawn through cm() so it is correct at whatever Scale the set is built at (see
+# tools/ruler.scad). RULER_LENGTHS are the real distances it spans, in cm. A thin bar, so like a
+# wall it takes the small 2x1 disc (with the pad path); RULER_MAGNETS=0 for a handheld one.
+TOOLS_DIR := $(FILES_DIR)/tools
+RULER_LENGTHS := 300 500
+RULER_MAGNETS ?= 2
+$(foreach l,$(RULER_LENGTHS),$(eval $(call part,tools,ruler,Length=$(l);Magnets=$(RULER_MAGNETS),ruler_$(l))))
+
+TOOLS_STLS := $(STLS_tools)
+TOOLS_PNGS := $(TOOLS_STLS:.stl=.png)
+
+.PHONY: tools
+tools: $(TOOLS_STLS) $(TOOLS_PNGS) ## render tools (ruler) + previews -> files/tools/
+
+# ---- Paper play-mat ----------------------------------------------------------
+# A printable paper mat the tokens stand ON: a slight 50 cm grid and a ruler border, at the
+# same 1:SCALE the parts are shrunk to. It is generated by print/grid_mat.py, not OpenSCAD
+# — a print wants a faint grid and a black ruler at once, which a single 2D SVG fill cannot
+# do. One SVG per paper size x scale x orientation, each also written to PDF (the format a
+# print dialog scales most reliably) when a converter is on PATH; the SVGs are tracked, the
+# PDFs are not — they embed a timestamp so they are not byte-reproducible, so regenerate with
+# `make mat`. Print at 100 % / actual size: the 50 mm bar on the sheet is the check.
+PYTHON      ?= python3
+MAT         := $(PYTHON) print/grid_mat.py
+MAT_DIR     := $(FILES_DIR)/mat
+# The mat tracks the set's own SCALE, exactly as the ruler does — a mat only matches the
+# tokens at the scale they were built at, so `make mat` gives a 1:40 mat by default and
+# `make mat SCALE=50` gives the mat for a set rebuilt with `make all SCALE=50`. Override
+# MAT_SCALES only to render several scales at once.
+MAT_SCALES  ?= $(SCALE)
+MAT_ORIENTS ?= portrait landscape
+# Paper sizes: a3 / a4 / a5 / letter, or an explicit WxH in mm (the generator's --paper).
+MAT_PAPERS  ?= a4 a3
+# SVG -> PDF: rsvg-convert if present (fast, tidy), else Inkscape; skipped with a note if neither.
+MAT_SVG2PDF := $(shell command -v rsvg-convert 2>/dev/null || command -v inkscape 2>/dev/null)
+
+.PHONY: mat
+mat: ## generate the printable grid mats -> files/mat/ (SVG tracked, PDF local)
+	@mkdir -p "$(MAT_DIR)"
+	@$(foreach p,$(MAT_PAPERS),$(foreach s,$(MAT_SCALES),$(foreach o,$(MAT_ORIENTS),\
+	  $(MAT) --paper $(p) --scale $(s) --orient $(o) --out "$(MAT_DIR)/grid_mat_$(p)_1-$(s)_$(o).svg" ;)))
+	@$(MAKE) --no-print-directory mat-pdf
+
+.PHONY: mat-pdf
+mat-pdf: ## (re)build print-ready PDFs from the mat SVGs, if a converter is available
+	@if [ -z "$(MAT_SVG2PDF)" ]; then \
+	  echo "NOTE: no rsvg-convert or inkscape on PATH — SVGs written, PDFs skipped"; \
+	else \
+	  echo ">> $(notdir $(MAT_SVG2PDF)): SVG -> PDF under $(MAT_DIR)"; \
+	  find "$(MAT_DIR)" -name '*.svg' | while read -r f; do \
+	    case "$(notdir $(MAT_SVG2PDF))" in \
+	      rsvg-convert) rsvg-convert -f pdf -o "$${f%.svg}.pdf" "$$f" ;; \
+	      inkscape) inkscape --export-type=pdf --export-filename="$${f%.svg}.pdf" "$$f" >/dev/null 2>&1 ;; \
+	    esac; \
+	  done; \
+	fi
 
 #------------------------------------------------------------------------------------------
 # Generic recipes. Each concrete target supplies its own SRC + PARAMS (see room blocks).
@@ -633,7 +800,8 @@ walls: $(WALLS_STLS) $(WALLS_PNGS) ## render wall segments, windows + doors -> f
 #==========================================================================================
 ALL_STLS := $(BEDROOM_STLS) $(LIVINGROOM_STLS) $(KITCHEN_STLS) $(DININGROOM_STLS) \
             $(BATHROOM_STLS) $(OFFICE_STLS) $(HALLWAY_STLS) $(KIDSROOM_STLS) \
-            $(LAUNDRY_STLS) $(OUTDOOR_STLS) $(WALLS_STLS)
+            $(LAUNDRY_STLS) $(OUTDOOR_STLS) $(HOBBY_STLS) $(WALLS_STLS) \
+            $(POOL_STLS) $(TOOLS_STLS)
 
 .PHONY: list
 list: ## list every declared part and the .scad it renders from
@@ -698,9 +866,30 @@ clean-walls: ## remove rendered wall files (files/walls/)
 	@rm -rf "$(WALLS_DIR)"
 	@echo "✅ removed $(WALLS_DIR)"
 
+.PHONY: clean-hobby
+clean-hobby: ## remove rendered hobby files (files/hobby/)
+	@rm -rf "$(HOBBY_DIR)"
+	@echo "✅ removed $(HOBBY_DIR)"
+
+.PHONY: clean-pool
+clean-pool: ## remove rendered pool files (files/pool/)
+	@rm -rf "$(POOL_DIR)"
+	@echo "✅ removed $(POOL_DIR)"
+
+.PHONY: clean-tools
+clean-tools: ## remove rendered tools files (files/tools/)
+	@rm -rf "$(TOOLS_DIR)"
+	@echo "✅ removed $(TOOLS_DIR)"
+
+.PHONY: clean-mat
+clean-mat: ## remove generated print mats (files/mat/)
+	@rm -rf "$(MAT_DIR)"
+	@echo "✅ removed $(MAT_DIR)"
+
 .PHONY: clean
 clean: clean-bedroom clean-livingroom clean-kitchen clean-diningroom clean-bathroom \
-       clean-office clean-hallway clean-kidsroom clean-laundry clean-outdoor clean-walls ## remove all rendered files
+       clean-office clean-hallway clean-kidsroom clean-laundry clean-outdoor clean-hobby \
+       clean-walls clean-pool clean-tools clean-mat ## remove all rendered files
 
 # FORCE (always out of date) is only pulled in when REBUILD=1.
 .PHONY: FORCE

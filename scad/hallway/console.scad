@@ -19,8 +19,9 @@ Height = 80;   // cm — the top
 Print_h = printed_h(Height);
 
 // The top slab, in real cm — the only part of the token at full footprint, so its
-// edge is the line you read the size off.
-Top_h = 4;
+// edge is the line you read the size off. At 8 cm (2 mm printed) the proud top edge is sturdy
+// and reads as a table top; a 4 cm top was a fragile 1 mm wafer standing off the body.
+Top_h = 8;
 // How far the body under the top is set back from the edge, in real cm. It
 // stands in for the open space under a real console, but it is a slope, not
 // a step, and it is clamped below (see console()) — on a top this shallow

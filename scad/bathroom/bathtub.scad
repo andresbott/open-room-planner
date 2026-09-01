@@ -7,6 +7,12 @@
 // across the table. What is left standing round it is the rim — wider at the tap
 // end, so the token also reads the right way round.
 //
+// A small faucet stands on that wider tap deck — a spout and two handle knobs — so the
+// head of the bath is unmistakable. It is modelled as VERTICAL PRISMS standing off the
+// deck, never a spout arching over the water: a real tap at 1:40 is a 1 mm spike over a
+// hollow that will not print and snaps if it does (§1.3, the reason washbasin.scad leaves
+// its tap off), while a prism up the print direction lands every layer on the one below.
+//
 // Width/Depth are the real-world footprint in cm; Width is the length you lie
 // along. Common sizes (twbathtub.com, "Summary of common dimensions and
 // installation heights of bathtubs"): rectangular 120..180 long x 70..80 wide,
@@ -48,6 +54,17 @@ Basin_floor = 1.2;
 // only engraving on the piece — the rim is left plain, so the one circle on the
 // token is unmistakably the drain, down in the bath.
 Drain_r = 1;  // mm
+// The faucet on the tap deck, at the +X (tap) end over the deeper deck: a spout and two
+// handle knobs, all vertical prisms standing off the rim — see the header on why a bath
+// tap is a prism and not a spout arching over the water. Real cm: the rises scale like any
+// height, the footprints like any plan dimension.
+Show_tap   = true;
+Tap_h      = 18;  // cm the spout stands above the rim — tall, so it clearly reads as a spout ...
+Tap_w      = 6;   // ... its body this wide across (Y) ...
+Tap_reach  = 11;  // ... and this long toward the basin (X), so it reads as a spout, not a post
+Handle_h   = 4;   // cm the two handle knobs stand — low, so the spout dominates ...
+Handle_d   = 6;   // ... each this wide ...
+Handle_gap = 22;  // ... the two of them this far apart (Y, centre to centre), flanking the spout
 // Magnet pockets in the bottom face, in a row along the length (0 = none). Two
 // keep the piece from pivoting on the board; 70 cm of depth is 17.5 mm at 1:40,
 // plenty of room for a 4 mm disc. On an oval the count comes from the bounding
@@ -62,15 +79,38 @@ module bathtub() {
         echo(str("WARNING: a ", Basin_depth, " cm basin does not fit in a ", Height,
                  " cm tub over ", basin_under(), " mm of magnet pocket — sunk ",
                  rise_cm(basin_h()), " cm instead (give it more: BATHTUB_H)"));
-    difference() {
-        tub(Print_h);
-        if (Show_basin) {
-            basin(Print_h);
-            drain(Print_h);
+    union() {
+        difference() {
+            tub(Print_h);
+            if (Show_basin) {
+                basin(Print_h);
+                drain(Print_h);
+            }
+            if (Magnets > 0)
+                magnets(Width, Depth, Magnets);
         }
-        if (Magnets > 0)
-            magnets(Width, Depth, Magnets);
+        if (Show_tap) tap(Print_h);
     }
+}
+
+// The faucet, standing on the tap deck at the +X end: a spout — a rounded vertical prism
+// elongated toward the basin, so it reads as a spout and not a post — and two handle knobs
+// behind it. All stand off the deck as vertical prisms, buried a hair into it so they weld
+// solid; nothing arches over the water, so nothing overhangs (see the header). The spout is
+// kept clear of the basin edge so its foot lands on the solid rim, not over the hollow.
+module tap(top_z) {
+    inner   = basin_w() / 2 - Tap_deck / 2;    // real cm — the basin's +X edge
+    outer   = Width / 2;                        // real cm — the tub's +X end
+    spout_x = inner + Tap_reach / 2 + 2;        // just inside the deck from the basin
+    knob_x  = outer - Handle_d / 2 - 2;         // near the outer end of the deck
+    translate([cm(spout_x), 0, top_z - rise(2)])
+        linear_extrude(height = rise(Tap_h) + rise(2))
+            hull() for (sx = [-1, 1])            // a stadium: two round ends, so it never
+                translate([sx * cm(Tap_reach - Tap_w) / 2, 0])   // collapses to nothing
+                    circle(d = cm(Tap_w));
+    for (s = [-1, 1])
+        translate([cm(knob_x), s * cm(Handle_gap) / 2, top_z - rise(2)])
+            cylinder(h = rise(Handle_h) + rise(2), d = cm(Handle_d));
 }
 
 // The body: the tub's real footprint, full height, in whichever shape.

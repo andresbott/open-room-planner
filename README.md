@@ -106,6 +106,7 @@ assembled from the catalogue rather than printed in one piece:
 | part | real sizes (cm) | files |
 |---|---|---|
 | `wall` | thickness 11.5 / 17.5 / 24, length 25–300 | 18 |
+| `corner` | thickness 11.5 / 17.5 / 24, an L with ~30 cm stub legs | 3 |
 | `window` | opening 60–180 in 20 cm steps | 21 |
 | `door` | opening 62.5 / 75 / 87.5 / 100 / 112.5, two hands | 30 |
 | `sliding_door` | opening 150 / 175 / 200 / 250 / 300 | 15 |
@@ -196,8 +197,26 @@ has. It carries no engraved number — the tracks have the threshold, and betwee
 there is less than a legible cap height on a wall this thin, so like a window it is told
 apart by shape.
 
+A **corner** lets you peg a room out without walling every side of it: it is an **L** of
+two wall arms meeting at a right angle, so you drop one at each corner and leave the run
+between **implied** rather than laying a segment along the whole wall.
+
+```
+[corner]              [corner]        drop a corner at each corner; the walls between
+                                      are implied, not placed — turn the L in the plan
+[corner]              [corner]        for each of the four corners (there is no hand)
+```
+
+Same thickness, height and square ends as `wall`, so a corner still butts flush against a
+straight segment where you *do* want a length of wall. Its arms are short stubs (`CORNER_LEG`,
+~30 cm past the corner block — the same length at every thickness, so all three read as a
+clean L), and it carries **no engraved number**: unlike a segment it has no length to
+carry, because the wall that matters is the one implied in the gap. One L covers all four
+corners just by turning it, exactly as the pool is pegged out of corner tiles.
+
 ```sh
-make walls                            # all 84 parts
+make walls                            # all 87 parts
+make walls CORNER_LEG=50              # longer corner returns (a bigger stub each way)
 make walls WALL_H=37.5                # a taller ribbon — 150 cm, up to a window head
                                       # (printed mm, not cm; raise WINDOW_SILL_H with
                                       #  it to keep the sill 80% of the way up)
@@ -209,6 +228,100 @@ make walls WINDOW_SILL_H=14           # a lower sill, so more of the wall is gla
 make walls DOOR_SWING=false           # plain openings, swing arc engraved instead
 make walls SLIDING_PANELS=3           # three-leaf sliders instead of two
 ```
+
+## Pool
+
+A swimming pool is built the way a room shell is — from square tiles that **butt flush on a
+fixed module**, assembled into one pool rather than printed in a piece. Six kinds make any pool:
+
+| kind | coping (the paved rim) | the rest of the tile |
+|---|---|---|
+| `corner` | two outside edges, an L | water on the inner quarter |
+| `edge` | one outside edge | water — a side of the pool |
+| `water` | — | water to every edge — an interior tile |
+| `steps` | one outside edge | water that **steps down** from it — the shallow end |
+| `round` | two outside edges, curved | a **rounded corner** — the outer and water edges sweep a quarter circle |
+| `ladder` | one outside edge | a narrow **ladder** flight of entry steps into the water |
+
+The smallest pool is **four corners** — already a full coping ring round four quarters of water.
+A longer one drops `edge` tiles along the sides and `water` tiles in the middle, with a `steps`
+tile where you get in:
+
+```
+[corner][ edge ][corner]
+[ edge ][water ][ edge ]     turn a corner or edge in the plan to face its coping outward, the
+[corner][steps ][corner]     way you turn a wall — the default corner faces −X/−Y (a SW corner),
+                             a quarter turn gives the other three.
+```
+
+Where two tiles meet, the water runs right to the edge, so it reads as **one continuous sheet**
+while each tile still prints as its own watertight tray. The surface is **rippled** — low rounded
+swells rather than a glassy plane — and the near-square tile takes a **third magnet at its centre**
+(on top of the two in a row) so a 2 m sheet cannot lift or pivot between its neighbours. Like a
+shower tray a pool tile is nearly floor level, and its height is set not by how deep a pool is but
+by what it takes to sink a pan of water **above a magnet pocket** — so it is a low tile that clamps
+the water and says so in the render log if it had to (raise `POOL_H`).
+
+```sh
+make pool                     # the six tiles at the 200 cm (2 m) module
+make pool POOL_MODULE=150     # a smaller module — a plunge pool
+make pool POOL_H=45           # a deeper pool (more water sunk over the magnet)
+```
+
+## Ruler
+
+A ruler for the plan itself: a low flat bar with a **tick every 50 cm and a numbered one every
+100**, so you can lay it across the board and read how much real room a run takes without doing
+the 1:40 arithmetic. Its marks are drawn through the same `cm()` the parts use, so the ruler is
+**correct at whatever scale the set is built at** — render everything at 1:50 and its hundreds
+move to 20 mm apart to match.
+
+```sh
+make tools                    # a 3 m and a 5 m ruler
+make tools RULER_LENGTHS=200  # a shorter one
+make tools RULER_MAGNETS=0    # no pockets — a handheld ruler you slide about
+```
+
+## Printable mat
+
+A paper floor to stand the tokens on, printed on an ordinary A4 printer — the flat
+counterpart to the ruler above. It carries a **slight grid** (a faint line every 50 cm, a
+stronger one every metre) and a **ruler border** (a tick every 50 cm, a numbered one every
+metre, 0 in the bottom-left corner), both at the **same 1:40** the tokens are shrunk to, so a
+piece covers exactly the cells its real footprint would — a 160x200 bed is 4 x 5 cells. It is
+an SVG generated by `print/grid_mat.py`, not an OpenSCAD export, because a print wants a faint
+grid and a black ruler at once and a single 2D fill cannot do both.
+
+The one rule for printing: **print at 100 % (actual size), not "fit to page"** — otherwise the
+scale is lost. Every sheet carries a **50 mm calibration bar** in the top margin: print it,
+measure that bar, and if it is 50 mm the grid is a true 1:40.
+
+```sh
+make mat                      # A4 + A3, portrait + landscape — SVG + PDF, into files/mat/
+```
+
+| sheet | field | for |
+|---|---|---|
+| `grid_mat_a4_1-40_portrait`  | 7.5 x 11 m | the default |
+| `grid_mat_a4_1-40_landscape` | 11 x 7.5 m | a wide room |
+| `grid_mat_a3_1-40_portrait`  | 11 x 16 m  | a bigger sheet, if your printer takes A3 |
+| `grid_mat_a3_1-40_landscape` | 16 x 11 m  | ... and wide |
+
+`make mat` builds A4 and A3 by default (`MAT_PAPERS ?= a4 a3`; the generator also knows `a5`
+and `letter`, and takes an explicit `WxH` in mm).
+
+Like the ruler, the mat tracks the set's own `SCALE`, because a mat only matches the tokens at
+the scale they were built at. `make mat` follows whatever scale you build the parts at, so a
+1:50 set gets a 1:50 mat from the same command:
+
+```sh
+make all SCALE=50 && make mat SCALE=50    # a 1:50 set and the mat that fits it
+```
+
+The **SVGs are tracked**; the **PDFs are not** — the SVG->PDF converters embed a timestamp, so
+the PDFs are not byte-reproducible. `make mat` writes both (a PDF where `rsvg-convert` or
+`inkscape` is on the PATH — the format a print dialog scales most reliably); regenerate them any
+time.
 
 ## Magnets
 
