@@ -26,7 +26,9 @@
 // 3-seat, 240 for a large one (IKEA-ish); Depth is the overall seat depth, back cushion
 // included. All real-world cm, as are the heights: Height is the top of the back, Arm the
 // top of the arms (lower, as on a real sofa) and Seat the block the cushions rise from
-// (see printed_h() / rise() in lib/common.scad).
+// (see printed_h() / rise() in lib/common.scad). The Makefile declares the common IKEA
+// models by name at their real footprints — KLIPPAN, EKTORP, KIVIK, SÖDERHAMN and VIMLE
+// straight, the KIVIK and FRIHETEN corner sofas with a chaise — all this same part.
 //
 // Chaise = "left"/"right" makes an L-shaped chaise sectional: the seat extends forward as
 // a chaise at that end (the side it is on seen from the front, facing the back), with the

@@ -12,8 +12,9 @@
 // It has no worktop slab of its own (Slab = 0): a larder is doors floor to ceiling.
 //
 // Width/Depth are the real-world footprint in cm: a 60 cm-wide, 60 cm-deep
-// floor-standing larder/broom unit (override Depth to 35 for the 60x35 wall-unit variant
-// — same width, a shallower carcass). Height is the real carcass height — a full-height
+// floor-standing larder/broom unit (override Depth to 37 for the 60x37 wall-unit variant
+// — same width, a shallower carcass, the METOD wall-cabinet depth). Height is the real
+// carcass height — a full-height
 // larder unit, floor to just under the ceiling — shrunk by the plan scale like the
 // footprint (see printed_h() in lib/common.scad), so it is one of the tallest pieces of
 // the set.
@@ -21,7 +22,7 @@
 include <../lib/common.scad>
 
 Width  = 60;   // cm
-Depth  = 60;   // cm — a 60x35 wall-unit variant shares this width; override to 35 for that
+Depth  = 60;   // cm — a 60x37 wall-unit variant shares this width; override to 37 for that
 Height = 200;  // cm — full-height larder carcass (220 for the tall run)
 
 // the printed height, mm: Height at the plan scale
@@ -42,8 +43,8 @@ Door_height = 70;  // cm — ... and how tall one course of them runs
 
 // Magnet pockets in the bottom face (0 = none). Small and near-square, so one central
 // pocket holds it down. It goes in the plinth: 54 cm of that front to back is 13.5 mm at
-// 1:40, plenty for a 4 mm disc, and the 35 cm-deep wall-unit variant still leaves 29 cm
-// (7.25 mm), which the 4 mm disc also fits (see unit_plinth_d() and Magnet_* in
+// 1:40, plenty for a 4 mm disc, and the 37 cm-deep wall-unit variant still leaves 31 cm
+// (7.75 mm), which the 4 mm disc also fits (see unit_plinth_d() and Magnet_* in
 // lib/common.scad).
 Magnets = 1;
 
