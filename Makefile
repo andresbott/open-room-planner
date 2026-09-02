@@ -190,12 +190,13 @@ LIVINGROOM_DIR := $(FILES_DIR)/livingroom
 #    the cone, globe and tripod shapes at any shade/foot size; they are just not
 #    built (override Type/Shade to render one).
 LAMP_H       ?= 160
-# magnet pockets per lamp (0 = none). At 1:40 a 30 cm lamp foot is 7.5 mm across —
+# magnet pockets per lamp (0 = none). At 1:40 a 40 cm lamp foot is 10 mm across —
 # comfortably wide enough for a 4 mm disc, so the lamp takes one pocket.
 LAMP_MAGNETS ?= 1
-# the drum shade diameter and the foot it stands on, in cm
+# the drum shade diameter and the foot it stands on, in cm. The foot is broad — a stable,
+# well-stuck print for a tall, top-heavy piece — but still narrower than the shade.
 LAMP_SHADE   ?= 45
-LAMP_BASE    ?= 30
+LAMP_BASE    ?= 40
 # The least the pole may print, in mm — a real 5 cm pole is only 1.25 mm at 1:40, so
 # this is what actually gets printed. Six perimeters at a 0.4 nozzle: a pole this
 # thick prints upright without wobbling and survives handling. Raise it for a
@@ -221,6 +222,22 @@ CHAISE_LEG    ?= 95
 CHAISE_HANDS  := left right
 $(foreach w,$(SOFA_WIDTHS),$(eval $(call part,livingroom,sofa,Width=$(w);Depth=$(SOFA_DEPTH);Height=$(SOFA_H);Seat=$(SOFA_SEAT);Magnets=$(SOFA_MAGNETS),sofa_$(w)x$(SOFA_DEPTH))))
 $(foreach h,$(CHAISE_HANDS),$(eval $(call part,livingroom,sofa,Chaise="$(h)";Width=$(CHAISE_WIDTH);Depth=$(SOFA_DEPTH);Chaise_depth=$(CHAISE_DEPTH);Chaise_width=$(CHAISE_LEG);Height=$(SOFA_H);Seat=$(SOFA_SEAT);Magnets=$(SOFA_MAGNETS),sofa_chaise_$(CHAISE_WIDTH)x$(CHAISE_DEPTH)_$(h))))
+# -- IKEA sofas: the common models at their real catalogue footprints, in cm (sofa.scad
+#    takes any Width/Depth/Height/Seat, so these are declarations of the same part, not a new
+#    one). Straight 2- and 3-seaters — the compact, low KLIPPAN, the classic EKTORP, the big
+#    KIVIK, the deep low-back SÖDERHAMN and the large VIMLE — then two L-shaped corner sofas,
+#    the KIVIK with a chaise and the FRIHETEN corner sofa-bed, each in both hands. Depth,
+#    Height and Seat vary by model, so a loveseat sits lower and shallower than a deep modern
+#    three-seater (dimensions per ikea.com / dimensions.com).
+$(eval $(call part,livingroom,sofa,Width=180;Depth=88;Height=66;Seat=43;Magnets=2,sofa_ikea_klippan_180x88))
+$(eval $(call part,livingroom,sofa,Width=179;Depth=88;Height=88;Seat=45;Magnets=2,sofa_ikea_ektorp_179x88))
+$(eval $(call part,livingroom,sofa,Width=218;Depth=88;Height=88;Seat=45;Magnets=2,sofa_ikea_ektorp_218x88))
+$(eval $(call part,livingroom,sofa,Width=190;Depth=95;Height=83;Seat=45;Magnets=2,sofa_ikea_kivik_190x95))
+$(eval $(call part,livingroom,sofa,Width=228;Depth=95;Height=83;Seat=45;Magnets=2,sofa_ikea_kivik_228x95))
+$(eval $(call part,livingroom,sofa,Width=198;Depth=99;Height=83;Seat=40;Magnets=2,sofa_ikea_soderhamn_198x99))
+$(eval $(call part,livingroom,sofa,Width=241;Depth=98;Height=83;Seat=45;Magnets=2,sofa_ikea_vimle_241x98))
+$(foreach h,$(CHAISE_HANDS),$(eval $(call part,livingroom,sofa,Chaise="$(h)";Width=280;Depth=95;Chaise_depth=163;Chaise_width=95;Height=83;Seat=45;Magnets=2,sofa_ikea_kivik_chaise_280x163_$(h))))
+$(foreach h,$(CHAISE_HANDS),$(eval $(call part,livingroom,sofa,Chaise="$(h)";Width=230;Depth=105;Chaise_depth=151;Chaise_width=99;Height=66;Seat=43;Magnets=2,sofa_ikea_friheten_230x151_$(h))))
 
 # -- Extra living-room pieces, one default variant each, at their real heights in cm.
 #    The armchair carries two: the top of the back (Height) over the seat it rises
@@ -284,14 +301,31 @@ $(eval $(call part,kitchen,worktop,Width=60;Height=$(WORKTOP_H);Magnets=1,workto
 # the in-between run lengths — 80 and 100 cm — the part sizes its cabinets off Width
 $(eval $(call part,kitchen,worktop,Width=80;Height=$(WORKTOP_H);Magnets=2,worktop_80))
 $(eval $(call part,kitchen,worktop,Width=100;Height=$(WORKTOP_H);Magnets=2,worktop_100))
+# the narrow METOD base widths — 40, 30 and 20 cm (a narrow cabinet down to a filler). Near
+# square or narrower, so one pocket; at 1:40 the 20/30 cm fillers drop to the small disc.
+$(eval $(call part,kitchen,worktop,Width=40;Height=$(WORKTOP_H);Magnets=1,worktop_40))
+$(eval $(call part,kitchen,worktop,Width=30;Height=$(WORKTOP_H);Magnets=1,worktop_30))
+$(eval $(call part,kitchen,worktop,Width=20;Height=$(WORKTOP_H);Magnets=1,worktop_20))
 $(eval $(call part,kitchen,island,Height=$(ISLAND_H);Magnets=2,island))
 $(eval $(call part,kitchen,sink,Height=$(SINK_H);Magnets=2,sink))
 $(eval $(call part,kitchen,cooker,Height=$(COOKER_H);Magnets=1,cooker))
 # a wider range: 90 cm with six burners (3x2) and a double oven
 $(eval $(call part,kitchen,cooker,Width=90;Height=$(COOKER_H);Burner_cols=3;Oven_cols=2;Magnets=2,cooker_90))
 $(eval $(call part,kitchen,dishwasher,Height=$(DISHWASHER_H);Magnets=1,dishwasher))
+# a 45 cm slimline dishwasher (the narrow METOD appliance gap) beside the 60 cm one
+$(eval $(call part,kitchen,dishwasher,Width=45;Height=$(DISHWASHER_H);Magnets=1,dishwasher_45))
 $(eval $(call part,kitchen,bar_stool,Height=$(BAR_STOOL_H);Magnets=1,bar_stool))
 $(eval $(call part,kitchen,cabinet,Height=$(K_CABINET_H);Magnets=1,cabinet))
+# the taller larder frames — 220 and 240 cm (the tall METOD high-cabinet heights) beside 200
+$(eval $(call part,kitchen,cabinet,Height=220;Magnets=1,cabinet_220))
+$(eval $(call part,kitchen,cabinet,Height=240;Magnets=1,cabinet_240))
+# wall cabinets: the same part shallower (Depth=37, the METOD wall depth) and low, hung over
+# a worktop — 40/60/80 wide at the 80 cm wall height, plus a tall 60x100. Door_width splits
+# the 80 into a pair; the others are a single door (see cabinet.scad).
+$(eval $(call part,kitchen,cabinet,Width=40;Depth=37;Height=80;Magnets=1,cabinet_wall_40x80))
+$(eval $(call part,kitchen,cabinet,Width=60;Depth=37;Height=80;Magnets=1,cabinet_wall_60x80))
+$(eval $(call part,kitchen,cabinet,Width=80;Depth=37;Height=80;Door_width=45;Magnets=1,cabinet_wall_80x80))
+$(eval $(call part,kitchen,cabinet,Width=60;Depth=37;Height=100;Magnets=1,cabinet_wall_60x100))
 $(eval $(call part,kitchen,fridge,Height=$(FRIDGE_H);Magnets=1,fridge))
 # The corner unit takes one pocket under each arm — corner to opposite corner, which is
 # what stops an L pivoting (see Magnets in corner_unit.scad, where 1 and 3 mean other
@@ -307,6 +341,8 @@ $(eval $(call part,kitchen,breakfast_bar,Width=150;Height=$(BREAKFAST_BAR_H);Mag
 $(eval $(call part,kitchen,breakfast_bar,Width=210;Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar_210))
 $(eval $(call part,kitchen,breakfast_bar,Width=240;Height=$(BREAKFAST_BAR_H);Magnets=2,breakfast_bar_240))
 $(eval $(call part,kitchen,oven_column,Height=$(OVEN_COLUMN_H);Magnets=1,oven_column))
+# a taller 220 cm oven housing (the tall METOD high-cabinet height) beside the 200
+$(eval $(call part,kitchen,oven_column,Height=220;Magnets=1,oven_column_220))
 # a single-oven column (no microwave) and a single oven over a warming drawer — the same
 # housing, Micro_h=0 dropping the microwave and Warming_h adding the drawer (see oven_column.scad)
 $(eval $(call part,kitchen,oven_column,Micro_h=0;Height=$(OVEN_COLUMN_H);Magnets=1,oven_column_single))
@@ -598,6 +634,14 @@ PROJECTOR_SCREEN_WIDTHS  := 200 280
 PROJECTOR_SCREEN_H       ?= 16
 PROJECTOR_SCREEN_MAGNETS ?= 2
 $(foreach w,$(PROJECTOR_SCREEN_WIDTHS),$(eval $(call part,hobby,projector_screen,Width=$(w);Height=$(PROJECTOR_SCREEN_H);Magnets=$(PROJECTOR_SCREEN_MAGNETS),projector_screen_$(w))))
+# -- Photo studio: a backdrop-and-lights set — a wide seamless backdrop coving down to the
+#    floor, a softbox angled in from each front corner, a posing stool in the middle. WIDTH is
+#    the backdrop width in cm (200 = a 2 m paper); the whole set fits within it. HEIGHT is the
+#    backdrop height (the tallest thing; the lights stand lower). See the .scad header.
+PHOTO_STUDIO_WIDTHS  := 200
+PHOTO_STUDIO_H       ?= 200
+PHOTO_STUDIO_MAGNETS ?= 2
+$(foreach w,$(PHOTO_STUDIO_WIDTHS),$(eval $(call part,hobby,photo_studio,Width=$(w);Height=$(PHOTO_STUDIO_H);Magnets=$(PHOTO_STUDIO_MAGNETS),photo_studio_$(w))))
 
 HOBBY_STLS := $(STLS_hobby)
 HOBBY_PNGS := $(HOBBY_STLS:.stl=.png)

@@ -26,7 +26,8 @@ include <../lib/common.scad>
 
 Type   = "drum";  // drum | cone | globe | tripod
 Shade  = 45;      // shade diameter, cm — the widest part of the lamp
-Base   = 30;      // foot diameter, cm (tripod: the spread of the legs)
+Base   = 40;      // foot diameter, cm (tripod: the spread of the legs) — a broad foot,
+                  // for a stable, well-stuck print of a tall, top-heavy piece
 Height = 160;     // cm — a floor lamp (50 for a table lamp)
 
 // the printed height, mm: Height at the plan scale
@@ -61,9 +62,9 @@ Cone_deep = 1.6;   // an uplighter is deeper than the flare needs to be, so its 
 Globe_rise = 0.7;  // where a globe is widest, as a share of its own height
 
 Show_rays = true;
-// Magnet pockets in the bottom face (0 = none). A lamp foot is the smallest footprint
-// in the set — 7.5 mm across at 1:40 for a 30 cm base — comfortably wide enough for a
-// 4 mm disc.
+// Magnet pockets in the bottom face (0 = none). A lamp foot is a small footprint — 10 mm
+// across at 1:40 for a 40 cm base — comfortably wide enough for a 4 mm disc, with the puck
+// kept deep enough to roof it (see foot_h()).
 Magnets = 1;
 
 lamp();
