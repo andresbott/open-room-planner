@@ -15,10 +15,11 @@
 #     without the grid fighting the furniture for the eye;
 #   - a stronger line every 1 m, and a black frame — the metre lines give the field a
 #     scale and the frame is the ruler's baseline;
-#   - a RULER BORDER: a tick every 50 cm and a longer, numbered one every metre, 0 in
-#     the bottom-left corner, exactly the ruler.scad convention — plus a finer 10 cm tick
-#     along the first metre of each axis, the detailed end of a tape measure;
-#   - a 50 mm calibration bar and a "print at 100 %" note in the top margin, because the
+#   - a RULER BORDER: a tick every 50 cm and a longer, numbered one every metre, 0 in the
+#     TOP-LEFT corner with the numbers running right and DOWN — the screen / SVG origin the
+#     floor plans use (not ruler.scad's y-up) — plus a finer 10 cm tick along the first
+#     metre of each axis, the detailed end of a tape measure;
+#   - a 50 mm calibration bar and a "print at 100 %" note in the bottom margin, because the
 #     mat is only to scale if the printer does not shrink it to fit: measure that bar with
 #     a real ruler and if it is 50 mm the grid is a true 1:SCALE.
 #
@@ -54,6 +55,33 @@ F_NUM  = 2.6                                  # metre-number cap height, mm
 F_NOTE = 2.1                                  # caption cap height, mm
 FONT   = "DejaVu Sans, Helvetica, Arial, sans-serif"
 
+# The ruler apparatus — ticks, metre numbers and the two captions — is drawn OUTSIDE the
+# frame, into the page margin. A desktop printer cannot print to the edge of the sheet,
+# and its unprintable border is usually WIDEST on the trailing edge — ~10-13 mm on many
+# home printers, and a landscape sheet is rotated onto that same edge — so the frame must
+# sit far enough in that none of the apparatus lands there. SAFE_EDGE is the white border
+# the DEEPEST mark (the bottom caption) is guaranteed to keep from the paper edge; the
+# metre numbers, being ~3 mm shallower, clear it by that much more. 12 mm covers the
+# common 0.5-inch trailing-edge printers; raise it — or pass --margin / make mat
+# MAT_MARGIN=.. — for a printer that eats even more, at the cost of a smaller grid.
+SAFE_EDGE = 12.0         # mm — guaranteed white border for the deepest printed mark
+
+
+def ruler_reach():
+    """How far, in mm, the ruler apparatus reaches beyond the frame on its deepest side —
+    the top: a long tick, the metre number beyond it, then the caption beyond that (plus a
+    little for the caption's descenders). SAFE_EDGE is measured in from here, so this is
+    what sets the frame margin."""
+    return T_MAJOR + F_NUM + 1.4 + F_NOTE + 0.3 * F_NOTE
+
+
+def default_margin():
+    """The least page-edge -> frame margin that keeps every tick, number and caption on
+    the page with SAFE_EDGE of printer border to spare (~21.7 mm at the built-in style).
+    Derived so it tracks the style — override with --margin (or `make mat MAT_MARGIN=..`)
+    for a printer that needs more, at the cost of a smaller grid."""
+    return round(ruler_reach() + SAFE_EDGE, 1)
+
 
 def cm(v, scale):
     """Real cm -> mm on the page — mirrors cm() in scad/lib/common.scad."""
@@ -76,7 +104,8 @@ def seg(x1, y1, x2, y2):
 
 class Page:
     """The geometry of one sheet: the grid frame and cells, derived from the page,
-    the scale and the least margin that leaves room for ticks and numbers."""
+    the scale and the margin — which must leave room for the ruler ticks, the metre
+    numbers and the two captions, all drawn outside the frame (see default_margin)."""
 
     def __init__(self, scale, page_w, page_h, margin):
         self.scale, self.w, self.h, self.margin = scale, page_w, page_h, margin
@@ -88,14 +117,14 @@ class Page:
         gw, gh = self.nx * self.minor, self.ny * self.minor
         self.gx0 = (page_w - gw) / 2              # left frame
         self.gx1 = self.gx0 + gw                  # right frame
-        self.gy_top = (page_h - gh) / 2           # top frame (smaller SVG y)
-        self.gy_bot = self.gy_top + gh            # bottom frame — plan "0", y up
+        self.gy_top = (page_h - gh) / 2           # top frame — the "0" edge, y runs DOWN
+        self.gy_bot = self.gy_top + gh            # bottom frame — the far (max-y) edge
 
 
 def render(pg):
     """One sheet: the faint grid, the metre grid, a ruler border with metre numbers
-    (0 in the bottom-left corner), the tape-measure fine ticks at the origin, and the
-    50 mm calibration bar."""
+    (0 in the top-left corner, running right and down), the tape-measure fine ticks at
+    that origin, and the 50 mm calibration bar."""
     o = []
     add = o.append
 
@@ -141,46 +170,46 @@ def render(pg):
     add(f'  <path d="{"".join(tmin)}" fill="none" stroke="{C_INK}" stroke-width="{W_TICK_MIN}"/>')
     add(f'  <path d="{"".join(tmaj)}" fill="none" stroke="{C_INK}" stroke-width="{W_TICK_MAJ}"/>')
 
-    # --- tape-measure fine ticks over the first metre of each axis, at the origin ---
+    # --- tape-measure fine ticks over the first metre of each axis, at the top-left origin ---
     if FINE_CM:
         fine = []
         c = FINE_CM
         while c <= min(FINE_SPAN_CM, pg.nx * MINOR_CM):
             if c % MINOR_CM:
                 x = pg.gx0 + cm(c, pg.scale)
-                fine.append(seg(x, pg.gy_bot, x, pg.gy_bot + T_FINE))
+                fine.append(seg(x, pg.gy_top, x, pg.gy_top - T_FINE))   # along the top, from 0
             c += FINE_CM
         c = FINE_CM
         while c <= min(FINE_SPAN_CM, pg.ny * MINOR_CM):
             if c % MINOR_CM:
-                y = pg.gy_bot - cm(c, pg.scale)
-                fine.append(seg(pg.gx0, y, pg.gx0 - T_FINE, y))
+                y = pg.gy_top + cm(c, pg.scale)
+                fine.append(seg(pg.gx0, y, pg.gx0 - T_FINE, y))         # down the left, from 0
             c += FINE_CM
         add(f'  <path d="{"".join(fine)}" fill="none" stroke="{C_INK}" stroke-width="{W_TICK_FINE}"/>')
 
-    # --- metre numbers: 0 in the corner, along the bottom and up the left ---
+    # --- metre numbers: 0 in the top-left corner, along the top and down the left ---
     nums = [f'  <g fill="{C_INK}" font-family="{FONT}" font-size="{F_NUM}">']
     for i in range(0, pg.nx + 1, pg.cpm):
         x = pg.gx0 + i * pg.minor
-        nums.append(f'    <text x="{n(x)}" y="{n(pg.gy_bot + T_MAJOR + F_NUM)}" '
+        nums.append(f'    <text x="{n(x)}" y="{n(pg.gy_top - T_MAJOR - 1.2)}" '
                     f'text-anchor="middle">{i // pg.cpm}</text>')
-    for j in range(pg.cpm, pg.ny + 1, pg.cpm):               # skip 0 — shown by the x-axis
-        y = pg.gy_bot - j * pg.minor
+    for j in range(pg.cpm, pg.ny + 1, pg.cpm):               # skip 0 — shown by the x-axis at the corner
+        y = pg.gy_top + j * pg.minor
         nums.append(f'    <text x="{n(pg.gx0 - T_MAJOR - 1.4)}" y="{n(y + F_NUM * 0.36)}" '
                     f'text-anchor="end">{j // pg.cpm}</text>')
     nums.append('  </g>')
     o.extend(nums)
 
-    # --- calibration bar + print note in the top margin ---
-    bx, by = pg.w / 2, pg.gy_top - 4.0
+    # --- calibration bar + print note in the bottom margin (the top now carries the numbers) ---
+    bx, by = pg.w / 2, pg.gy_bot + 4.5
     add(f'  <path d="{seg(bx - 25, by, bx + 25, by)}{seg(bx - 25, by - 1.4, bx - 25, by + 1.4)}'
         f'{seg(bx + 25, by - 1.4, bx + 25, by + 1.4)}" fill="none" stroke="{C_INK}" stroke-width="0.35"/>')
-    add(f'  <text x="{n(bx)}" y="{n(by - 2.2)}" fill="{C_NOTE}" font-family="{FONT}" '
+    add(f'  <text x="{n(bx)}" y="{n(by + 2.8)}" fill="{C_NOTE}" font-family="{FONT}" '
         f'font-size="{F_NOTE}" text-anchor="middle">'
         f'50 mm — print at 100 % (actual size), do not scale to fit</text>')
 
-    # --- caption in the bottom margin ---
-    add(f'  <text x="{n(pg.w / 2)}" y="{n(pg.gy_bot + T_MAJOR + F_NUM + F_NOTE + 1.4)}" '
+    # --- caption in the top margin, above the metre numbers ---
+    add(f'  <text x="{n(pg.w / 2)}" y="{n(pg.gy_top - (T_MAJOR + F_NUM + 2.0))}" '
         f'fill="{C_NOTE}" font-family="{FONT}" font-size="{F_NOTE}" text-anchor="middle">'
         f'open-room-planner &#183; scale 1:{pg.scale} &#183; grid {MINOR_CM} cm &#183; '
         f'numbers = metres &#183; {g(pg.nx / pg.cpm)} × {g(pg.ny / pg.cpm)} m field</text>')
@@ -214,9 +243,16 @@ def main():
     ap.add_argument("--scale", type=int, default=40, help="1:SCALE plan scale (default 40)")
     ap.add_argument("--paper", default="a4", help="a3 / a4 / a5 / letter, or WxH in mm (default a4)")
     ap.add_argument("--orient", choices=("portrait", "landscape"), default="portrait")
-    ap.add_argument("--margin", type=float, default=9.0, help="least page-edge->frame margin, mm")
+    ap.add_argument("--margin", type=float, default=default_margin(),
+                    help=f"least page-edge->frame margin, mm (default {default_margin():g} — "
+                         "clears the ruler numbers and a printer-safe border)")
     ap.add_argument("--out", help="output SVG path (default files/mat/grid_mat_<slug>.svg)")
     a = ap.parse_args()
+
+    if a.margin < ruler_reach():
+        print(f"WARNING: a {g(a.margin)} mm margin is under the {g(round(ruler_reach(), 1))} mm "
+              f"the ruler numbers and caption need outside the frame — they will print near or "
+              f"past the paper edge (raise --margin; default {default_margin():g})")
 
     name, pw, ph = parse_paper(a.paper)
     if a.orient == "landscape":
@@ -229,10 +265,17 @@ def main():
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as fh:
         fh.write(render(pg))
+    # the white border actually left to the nearest printed mark on each side — the
+    # smallest of these is what a printer must be able to print within, so report it.
+    border = min(pg.gy_top - ruler_reach(),                 # top caption (the deepest mark)
+                 pg.gy_top - (4.5 + 2.8 + 0.3 * F_NOTE),    # bottom calibration note
+                 pg.gx0 - (T_MAJOR + 1.4 + 1.2 * F_NUM),    # left metre number (2 digits)
+                 pg.gx0 - T_MAJOR)                          # right ruler tick
     print(f"wrote {path}")
     print(f"  1:{a.scale}  {a.orient}  grid {MINOR_CM} cm = {n(pg.minor)} mm  "
           f"field {g(pg.nx/pg.cpm)}×{g(pg.ny/pg.cpm)} m "
-          f"({pg.nx}×{pg.ny} cells)  margin {n(pg.gx0)}/{n(pg.gy_top)} mm")
+          f"({pg.nx}×{pg.ny} cells)  margin {n(pg.gx0)}/{n(pg.gy_top)} mm  "
+          f"border {g(round(border, 1))} mm to the nearest mark")
 
 
 if __name__ == "__main__":
