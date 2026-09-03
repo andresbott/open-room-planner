@@ -801,6 +801,11 @@ MAT_SCALES  ?= $(SCALE)
 MAT_ORIENTS ?= portrait landscape
 # Paper sizes: a3 / a4 / a5 / letter, or an explicit WxH in mm (the generator's --paper).
 MAT_PAPERS  ?= a4 a3
+# The mat already leaves a generous white border (SAFE_EDGE in print/grid_mat.py), sized so
+# the ruler numbers clear the unprintable edge of a typical home printer. If yours STILL
+# crops them its border is unusually wide — widen the mat's with `make mat MAT_MARGIN=26`
+# (mm, page-edge -> frame); empty means "use the generator's default".
+MAT_MARGIN  ?=
 # SVG -> PDF: rsvg-convert if present (fast, tidy), else Inkscape; skipped with a note if neither.
 MAT_SVG2PDF := $(shell command -v rsvg-convert 2>/dev/null || command -v inkscape 2>/dev/null)
 
@@ -808,7 +813,7 @@ MAT_SVG2PDF := $(shell command -v rsvg-convert 2>/dev/null || command -v inkscap
 mat: ## generate the printable grid mats -> files/mat/ (SVG tracked, PDF local)
 	@mkdir -p "$(MAT_DIR)"
 	@$(foreach p,$(MAT_PAPERS),$(foreach s,$(MAT_SCALES),$(foreach o,$(MAT_ORIENTS),\
-	  $(MAT) --paper $(p) --scale $(s) --orient $(o) --out "$(MAT_DIR)/grid_mat_$(p)_1-$(s)_$(o).svg" ;)))
+	  $(MAT) --paper $(p) --scale $(s) --orient $(o) $(if $(strip $(MAT_MARGIN)),--margin $(MAT_MARGIN),) --out "$(MAT_DIR)/grid_mat_$(p)_1-$(s)_$(o).svg" ;)))
 	@$(MAKE) --no-print-directory mat-pdf
 
 .PHONY: mat-pdf
